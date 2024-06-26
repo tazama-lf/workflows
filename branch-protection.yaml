@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Set Branch Protections
+on:
+  push:
+    branches: [ "dev", "main" ]
+jobs:
+  set-branch-protections:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up GitHub CLI
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install GitHub CLI
+        run: |
+          npm install -g @octokit/core
+      - name: Set Branch Protections
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: |
+          node <<'EOF'
+          const { Octokit } = require("@octokit/core");
+          const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+          const repos = [
+            "your-org/repo1",
+            "your-org/repo2",
+            "your-org/repo3"
+          ];
+          const protectionSettings = {
+            required_status_checks: {
+              strict: true,
+              contexts: ["context1", "context2"]
+            },
+            enforce_admins: true,
+            required_pull_request_reviews: {
+              required_approving_review_count: 2
+            },
+            restrictions: null
+          };
+          async function setBranchProtection(repo) {
+            try {
+              await octokit.request('PUT /repos/{owner}/{repo}/branches/{branch}/protection', {
+                owner: repo.split('/')[0],
+                repo: repo.split('/')[1],
+                branch: 'main',
+                ...protectionSettings
+              });
+              console.log(`Branch protection set for ${repo}`);
+            } catch (error) {
+              console.error(`Failed to set branch protection for ${repo}: ${error.message}`);
+            }
+          }
+          repos.forEach(repo => setBranchProtection(repo));
+          EOF

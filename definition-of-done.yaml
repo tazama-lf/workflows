@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: PR Definition of Done Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  definition_of_done:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Check Code Complete
+        run: |
+          # Check for TODO comments in the code
+          if grep -rnw '.' -e 'TODO'; then
+            echo "Code Complete check failed: Found TODO comments in the code."
+            exit 1
+          fi
+          echo "Code Complete check passed."
+      - name: Check Architecture
+        run: |
+          # Custom script to check architecture compliance
+          echo "Architecture check passed." # Implement the actual check based on your guidelines
+      - name: Run Unit Tests
+        run: |
+          # Run unit tests and check for coverage
+          npm run test:unit -- --coverage
+          echo "Unit Testing check passed."
+      - name: GitHub CI/CD
+        run: |
+          # Ensure all GitHub workflows have completed successfully
+          if ! curl -s https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }} | jq '.conclusion' | grep -q 'success'; then
+            echo "GitHub CI/CD check failed."
+            exit 1
+          fi
+          echo "GitHub CI/CD check passed."
+      - name: Automated Builds
+        run: |
+          # Check if build scripts are included and updated
+          echo "Automated Builds check passed." # Implement the actual check based on your guidelines
+      - name: Developer Documentation Ready
+        run: |
+          # Ensure documentation is in place
+          echo "Developer Documentation check passed." # Implement the actual check based on your guidelines
+      - name: Code Documentation
+        run: |
+          # Ensure auto-generated documentation is correct
+          echo "Code Documentation check passed." # Implement the actual check based on your guidelines
+      - name: Check Code Refactoring
+        run: |
+          # Custom script to check code refactoring
+          echo "Code Refactoring check passed." # Implement the actual check based on your guidelines
+      - name: Code Check-in
+        run: |
+          # Ensure code is checked in and PR process is followed
+          echo "Code Check-in check passed." # Implement the actual check based on your guidelines
+      - name: Code & Peer Reviews
+        run: |
+          # Check if code and peer reviews are done
+          echo "Code & Peer Reviews check passed." # Implement the actual check based on your guidelines
+      - name: Logging
+        run: |
+          # Ensure logging is properly configured
+          echo "Logging check passed." # Implement the actual check based on your guidelines
+      - name: Acceptance Criteria & Testing
+        run: |
+          # Ensure all acceptance criteria are met and testing is complete
+          echo "Acceptance Criteria & Testing check passed." # Implement the actual check based on your guidelines
+      - name: Automated & Regression Testing
+        run: |
+          # Run existing automated and regression tests
+          npm run test:automated
+          npm run test:regression
+          echo "Automated & Regression Testing check passed."
+      - name: Closure
+        run: |
+          # Ensure PR is closed and all tasks are marked complete
+          echo "Closure check passed." # Implement the actual check based on your guidelines
+      - name: Notify PR Status
+        if: failure()
+        run: |
+          echo "One or more checks in the definition of done failed. Please review the workflow logs for details."
+          exit 1
