@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# This GitHub Actions workflow checks that all commits in a pull request (PR) have a "Signed-off-by" line to ensure Developer Certificate of Origin (DCO) compliance.
+
+name: DCO
+
+on: [pull_request]  # Trigger this workflow on pull request events
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
+    steps:
+    - uses: actions/checkout@v4  # Checkout the repository code using the actions/checkout action
+      with:
+        fetch-depth: 0  # Fetch all history for all branches to ensure we have the full commit history
+
+    - name: Check for DCO Sign-off  # Step to check each commit for a Signed-off-by line
+      run: |
+        # Get the list of commits in the pull request
+        commits=$(git log --pretty=format:%H origin/${{ github.event.pull_request.head.ref }}..origin/${{ github.event.pull_request.base.ref }})
+        non_compliant_commits=""
+
+        # Check each commit for a Signed-off-by line
+        for commit in $commits; do
+          if ! git show --quiet --format=%B $commit | grep -q "^Signed-off-by: "; then
+            non_compliant_commits="$non_compliant_commits $commit"
+          fi
+        done
+
+        # If there are any non-compliant commits, list them and exit with a non-zero status
+        if [ -n "$non_compliant_commits" ]; then
+          echo "The following commits do not have a Signed-off-by line:"
+          for commit in $non_compliant_commits; do
+            echo "- $commit"
+          done
+          exit 1
+        fi
+      shell: bash  # Use bash shell to run the script
