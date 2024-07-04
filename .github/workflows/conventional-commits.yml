@@ -27,7 +27,7 @@ jobs:
           # Define the task types that are valid for conventional commits
           task_types: '["build","ci","docs","feat","fix","perf","refactor","style","test","feat!"]'
           # Map the conventional commit types to corresponding GitHub labels
-          custom_labels: '{"build": "build", "ci": "CI/CD", "docs": "documentation", "feat": "feature", "fix": "bug", "perf": "performance", "refactor": "refactor", "style": "style", "test": "test", "feat!": "feature breaking change"}'
+          custom_labels: '{"build": "build", "ci": "CI/CD", "docs": "documentation", "feat": "enhancement", "fix": "bug", "perf": "performance", "refactor": "refactor", "style": "style", "test": "test", "feat!": "enhancement breaking change"}'
           # Use a personal access token (GITHUB_TOKEN) stored in GitHub secrets for authentication
           token: ${{ secrets.GITHUB_TOKEN }}
           add_label: 'true'
