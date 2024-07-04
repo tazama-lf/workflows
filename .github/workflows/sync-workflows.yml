@@ -46,6 +46,54 @@ jobs:
         env:
           REPOS: |  # List of repositories to sync workflows to
             typology-processor
+            channel-router-setup-processor
+            event-sidecar
+            lumberjack
+            nats-utilities
+            batch-ppa
+            admin-service
+            cms
+            payment-platform-adapter
+            rule-001
+            rule-002
+            rule-003
+            rule-004
+            rule-006
+            rule-007
+            rule-008
+            rule-010
+            rule-011
+            rule-016
+            rule-017
+            rule-018
+            rule-020
+            rule-021
+            rule-024
+            rule-025
+            rule-026
+            rule-027
+            rule-028
+            rule-030
+            rule-044
+            rule-045
+            rule-048
+            rule-054
+            rule-063
+            rule-074
+            rule-075
+            rule-076
+            rule-078
+            rule-083
+            rule-084
+            rule-090
+            rule-091
+            rule-901
+            rule-cli
+            rule-executer
+            tms-service
+            transaction-aggregation-decisioning-processor
+            typology-processor 
+            
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
@@ -59,6 +107,7 @@ jobs:
             mkdir -p temp-workflows
             cp -r .github/workflows/* temp-workflows/
             rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
+            mkdir -p $repo/.github/workflows  # Create the workflows directory if it does not exist
             cp -r temp-workflows/* $repo/.github/workflows/
             cd $repo
             git add .
