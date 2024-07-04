@@ -1,0 +1,127 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# This GitHub Actions workflow syncs workflows from a central repository to other repositories when a pull request is merged.
+
+name: Sync Workflows
+
+on:
+  pull_request:
+    types: [closed]  # Trigger this workflow when a pull request is closed
+
+jobs:
+  sync:
+    if: github.event.pull_request.merged == true  # Run this job only if the pull request was merged
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
+    steps:
+      - name: Checkout Central Workflows Repo  # Step to checkout the repository containing the central workflows
+        uses: actions/checkout@v4
+
+      - name: Set up Git  # Step to configure Git with necessary details
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git config --global credential.helper store
+
+      - name: Install GitHub CLI  # Step to install GitHub CLI for creating pull requests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+          curl -fsSL https://github.com/cli/cli/releases/download/v2.14.7/gh_2.14.7_linux_amd64.tar.gz -o ghcli.tar.gz 
+          tar -xzf ghcli.tar.gz
+          sudo cp gh_2.14.7_linux_amd64/bin/gh /usr/local/bin/
+
+      - name: Get PR author details  # Step to get the details of the pull request author
+        id: pr_author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_AUTHOR_NAME=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.user.login')
+          PR_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          PR_AUTHOR_NAME_FULL=$(git log -1 --pretty=format:'%an')
+          echo "PR_AUTHOR_NAME=${PR_AUTHOR_NAME}" >> $GITHUB_ENV
+          echo "PR_AUTHOR_EMAIL=${PR_AUTHOR_EMAIL}" >> $GITHUB_ENV
+          echo "PR_AUTHOR_NAME_FULL=${PR_AUTHOR_NAME_FULL}" >> $GITHUB_ENV
+
+      - name: Sync Workflows to Other Repos  # Step to sync workflows to other repositories
+        env:
+          REPOS: |  # List of repositories to sync workflows to
+            typology-processor
+            channel-router-setup-processor
+            event-sidecar
+            lumberjack
+            nats-utilities
+            batch-ppa
+            admin-service
+            cms
+            payment-platform-adapter
+            rule-001
+            rule-002
+            rule-003
+            rule-004
+            rule-006
+            rule-007
+            rule-008
+            rule-010
+            rule-011
+            rule-016
+            rule-017
+            rule-018
+            rule-020
+            rule-021
+            rule-024
+            rule-025
+            rule-026
+            rule-027
+            rule-028
+            rule-030
+            rule-044
+            rule-045
+            rule-048
+            rule-054
+            rule-063
+            rule-074
+            rule-075
+            rule-076
+            rule-078
+            rule-083
+            rule-084
+            rule-090
+            rule-091
+            rule-901
+            rule-cli
+            rule-executer
+            tms-service
+            transaction-aggregation-decisioning-processor
+            typology-processor 
+            
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
+          for repo in $REPOS; do
+            git clone https://github.com/frmscoe/$repo.git
+            cd $repo
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/frmscoe/$repo.git
+            git checkout -b sync-workflows-update
+            git pull --rebase origin dev
+            cd ..
+            mkdir -p temp-workflows
+            cp -r .github/workflows/* temp-workflows/
+            rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
+            mkdir -p $repo/.github/workflows  # Create the workflows directory if it does not exist
+            cp -r temp-workflows/* $repo/.github/workflows/
+            cd $repo
+            git add .
+            git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}"
+            git push origin sync-workflows-update
+            
+            # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
+            echo "${{ secrets.GITHUB_TOKEN }}" > /tmp/gh_token
+            unset GITHUB_TOKEN
+            gh auth login --with-token < /tmp/gh_token
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update
+            
+            # Cleanup
+            rm /tmp/gh_token
+            
+            cd ..
+          done
