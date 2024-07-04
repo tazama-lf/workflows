@@ -25,8 +25,9 @@ jobs:
         uses: ytanikin/PRConventionalCommits@1.1.0  # Use the PRConventionalCommits action to validate PR titles
         with:
           # Define the task types that are valid for conventional commits
-          task_types: '["feat","fix","docs","test","ci","refactor","perf","chore","revert","BREAKING CHANGE"]'
+          task_types: '["build","ci","docs","feat","fix","perf","refactor","style","test","feat!"]'
           # Map the conventional commit types to corresponding GitHub labels
-          custom_labels: '{"feat": "enhancement", "fix": "bug", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP", "BREAKING CHANGE": "BREAKING CHANGE"}'
+          custom_labels: '{"build": "build", "ci": "CI/CD", "docs": "documentation", "feat": "feature", "fix": "bug", "perf": "performance", "refactor": "refactor", "style": "style", "test": "test", "feat!": "feature breaking change"}'
           # Use a personal access token (GITHUB_TOKEN) stored in GitHub secrets for authentication
           token: ${{ secrets.GITHUB_TOKEN }}
+          add_label: 'true'
