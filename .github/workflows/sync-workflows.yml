@@ -94,7 +94,6 @@ jobs:
             rule-executer
             tms-service
             transaction-aggregation-decisioning-processor
-            typology-processor 
             
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
