@@ -95,13 +95,13 @@ jobs:
             tms-service
             transaction-aggregation-decisioning-processor
             
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
           for repo in $REPOS; do
             git clone https://github.com/frmscoe/$repo.git
             cd $repo
-            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/frmscoe/$repo.git
+            git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/frmscoe/$repo.git
             git checkout -b sync-workflows-update
             git pull --rebase origin dev
             cd ..
@@ -116,7 +116,7 @@ jobs:
             git push origin sync-workflows-update
             
             # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
-            echo "${{ secrets.GITHUB_TOKEN }}" > /tmp/gh_token
+            echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
             unset GITHUB_TOKEN
             gh auth login --with-token < /tmp/gh_token
             gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update
