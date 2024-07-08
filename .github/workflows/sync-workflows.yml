@@ -54,7 +54,7 @@ jobs:
             nats-utilities
             batch-ppa
             admin-service
-            cms
+            cms-service
             payment-platform-adapter
             rule-001
             rule-002
