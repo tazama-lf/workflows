@@ -7,6 +7,7 @@ name: Sync Workflows
 on:
   pull_request:
     types: [closed]  # Trigger this workflow when a pull request is closed
+    branches: [ "dev" ] # The branches below must be a subset of the branches above
 
 jobs:
   sync:
@@ -54,7 +55,7 @@ jobs:
             nats-utilities
             batch-ppa
             admin-service
-            cms
+            cms-service
             payment-platform-adapter
             rule-001
             rule-002
