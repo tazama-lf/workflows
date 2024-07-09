@@ -47,55 +47,10 @@ jobs:
 
       - name: Sync Workflows to Other Repos  # Step to sync workflows to other repositories
         env:
-          REPOS: |  # List of repositories to sync workflows to
-            typology-processor
-            channel-router-setup-processor
-            event-sidecar
-            lumberjack
-            nats-utilities
-            batch-ppa
-            admin-service
-            cms-service
-            payment-platform-adapter
-            rule-001
-            rule-002
-            rule-003
-            rule-004
-            rule-006
-            rule-007
-            rule-008
-            rule-010
-            rule-011
-            rule-016
-            rule-017
-            rule-018
-            rule-020
-            rule-021
-            rule-024
-            rule-025
-            rule-026
-            rule-027
-            rule-028
-            rule-030
-            rule-044
-            rule-045
-            rule-048
-            rule-054
-            rule-063
-            rule-074
-            rule-075
-            rule-076
-            rule-078
-            rule-083
-            rule-084
-            rule-090
-            rule-091
-            rule-901
-            rule-cli
-            rule-executer
-            tms-service
-            transaction-aggregation-decisioning-processor
-            
+          REPOS: ${{ vars.TARGET_REPOS }}  # List of repositories to sync workflows to
+          SPECIFIC_FILES: ${{ vars.SPECIFIC_FILES }}  # List of specific files not to copy to certain repositories
+          SPECIFIC_REPOS: ${{ vars.SPECIFIC_REPOS }}  # List of specific repositories needing specific files not included
+          PR_REVIEWERS: ${{ vars.PR_REVIEWERS }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
@@ -110,7 +65,18 @@ jobs:
             cp -r .github/workflows/* temp-workflows/
             rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
             mkdir -p $repo/.github/workflows  # Create the workflows directory if it does not exist
-            cp -r temp-workflows/* $repo/.github/workflows/
+            
+            # Copy all files except the specific ones to certain repos
+            if [[ " ${SPECIFIC_REPOS} " =~ " ${repo} " ]]; then
+              for file in temp-workflows/*; do
+                if ! [[ " ${SPECIFIC_FILES} " =~ " $(basename $file) " ]]; then
+                  cp -r $file $repo/.github/workflows/
+                fi
+              done
+            else
+              cp -r temp-workflows/* $repo/.github/workflows/
+            fi
+
             cd $repo
             git add .
             git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}"
@@ -120,7 +86,7 @@ jobs:
             echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
             unset GITHUB_TOKEN
             gh auth login --with-token < /tmp/gh_token
-            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update --reviewer $PR_REVIEWERS
             
             # Cleanup
             rm /tmp/gh_token
