@@ -80,13 +80,22 @@ jobs:
             cd $repo
             git add .
             git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}"
+            git pull --rebase origin dev  # Pull with rebase to prevent non-fast-forward errors
             git push origin sync-workflows-update
             
             # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
             echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
             unset GITHUB_TOKEN
             gh auth login --with-token < /tmp/gh_token
-            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update --reviewer $PR_REVIEWERS
+            
+            # Create the PR with reviewers
+            IFS=',' read -ra REVIEWERS <<< "$PR_REVIEWERS"
+            REVIEWERS_ARGS=""
+            for reviewer in "${REVIEWERS[@]}"; do
+              REVIEWERS_ARGS+="--reviewer $reviewer "
+            done
+            
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS
             
             # Cleanup
             rm /tmp/gh_token
