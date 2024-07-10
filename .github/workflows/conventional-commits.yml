@@ -7,7 +7,7 @@
 
 # This GitHub Actions workflow validates the title of pull requests (PRs) to ensure they follow conventional commit standards.
 
-name: PR Conventional Commit Validation.
+name: PR Conventional Commit Validation
 
 on:
   # Trigger this workflow on specific events related to pull requests
