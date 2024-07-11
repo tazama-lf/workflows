@@ -72,6 +72,7 @@ jobs:
             mkdir -p temp-workflows
             cp -r .github/workflows/* temp-workflows/
             rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
+            rm temp-workflows/node.js.yml  # Remove the node.js.yml to avoid removing benchmarking tests specific for each repo
             mkdir -p $repo/.github/workflows  # Create the workflows directory if it does not exist
             
             # Copy all files except the specific ones to certain repos
