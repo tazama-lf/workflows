@@ -58,8 +58,16 @@ jobs:
             git clone https://github.com/frmscoe/$repo.git
             cd $repo
             git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/frmscoe/$repo.git
-            git checkout -b sync-workflows-update
-            git pull --rebase origin dev
+
+            if git ls-remote --heads origin sync-workflows-update | grep sync-workflows-update; then
+              # Branch exists, pull the latest changes
+              git checkout sync-workflows-update
+              git pull origin sync-workflows-update
+            else
+              # Branch does not exist, create it
+              git checkout -b sync-workflows-update
+            fi
+
             cd ..
             mkdir -p temp-workflows
             cp -r .github/workflows/* temp-workflows/
@@ -79,8 +87,8 @@ jobs:
 
             cd $repo
             git add .
-            git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}"
-            git push origin sync-workflows-update
+            git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}" || echo "No changes to commit"
+            git push origin sync-workflows-update || git push origin sync-workflows-update --force
             
             # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
             echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
@@ -93,7 +101,8 @@ jobs:
             for reviewer in "${REVIEWERS[@]}"; do
               REVIEWERS_ARGS+="--reviewer $reviewer "
             done
-            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS
+
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
             
             # Cleanup
             rm /tmp/gh_token
