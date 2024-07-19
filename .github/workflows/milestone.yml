@@ -21,21 +21,6 @@ jobs:
       # Step to check out the repository code.
       - name: Checkout Repository
         uses: actions/checkout@v2
-
-      # Step to set up Node.js environment, required for running npm commands.
-      - name: Setup Node.js (.npmrc)
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-          registry-url: https://npm.pkg.github.com/
-          # Scope is set to the user or organization that owns the workflow file.
-          scope: '@frmscoe'
-          
-      # Step to install npm dependencies using the `npm ci` command.
-      - name: Install dependencies
-        run: npm ci
-        env:
-          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
         
       # Step to set up environment variables required for the script.
       - name: Set up environment variables
