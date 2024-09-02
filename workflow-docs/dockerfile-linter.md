@@ -26,9 +26,9 @@
 
 #### Workflow Steps:
 
-- Checkout Code:
+- Checkout Code
 
-- Run Hadolint:
+- Run Hadolint
 
 Generates a SARIF file with the results.
 
