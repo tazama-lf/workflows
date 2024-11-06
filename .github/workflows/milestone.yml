@@ -15,6 +15,7 @@ on:
 
 jobs:
   close_milestone:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
 
     steps:

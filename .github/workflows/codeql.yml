@@ -24,6 +24,7 @@ on:
 
 jobs:
   analyze:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     name: Analyze
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:

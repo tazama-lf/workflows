@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   hadolint:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     name: Run hadolint scanning
     runs-on: ubuntu-latest
     permissions:

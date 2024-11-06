@@ -19,6 +19,7 @@ on:
     branches: [ "dev", "main" ]
 jobs:
   build:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
     name: run build
     strategy:
@@ -39,6 +40,7 @@ jobs:
         run: npm run build
 
   lint:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
     name: check style
     strategy:
@@ -60,6 +62,7 @@ jobs:
         run: npm run lint
 
   test:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
     name: check tests
     strategy:

@@ -9,6 +9,7 @@ on: [pull_request]
 
 jobs:
   dco:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     # Define the runner environment
     runs-on: ubuntu-latest
     

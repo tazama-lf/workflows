@@ -8,6 +8,7 @@ on: [pull_request]  # Trigger this workflow on pull request events
 
 jobs:
   gpg-verify:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
     steps:
     - uses: actions/checkout@v4  # Checkout the repository code using the actions/checkout action
