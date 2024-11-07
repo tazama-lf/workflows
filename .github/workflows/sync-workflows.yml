@@ -49,7 +49,10 @@ jobs:
 
       - name: Sync Workflows to Other Repos  # Step to sync workflows to other repositories
         env:
-          REPOS: ${{ vars.TARGET_REPOS }}  # List of repositories to sync workflows to
+          REPOS: |  # List of repositories to sync workflows to
+            relay-service
+            rule-901
+            rule-executer
           SPECIFIC_FILES: ${{ vars.SPECIFIC_FILES }}  # List of specific files not to copy to certain repositories
           SPECIFIC_REPOS: ${{ vars.SPECIFIC_REPOS }}  # List of specific repositories needing specific files not included
           PR_REVIEWERS: ${{ vars.PR_REVIEWERS }}  # List of reviewers
