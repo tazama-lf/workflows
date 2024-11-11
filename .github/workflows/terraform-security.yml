@@ -5,6 +5,8 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
 name: tfsec
 
 on:

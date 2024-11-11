@@ -2,6 +2,8 @@
 
 # This GitHub Actions workflow is designed to close a milestone and trigger a release workflow.
 
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
 name: Milestone Workflow
 
 # This workflow can be manually triggered with a specified milestone ID.

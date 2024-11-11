@@ -2,6 +2,8 @@
 
 # This GitHub Actions workflow syncs workflows from a central repository to other repositories when a pull request is merged.
 
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
 name: Sync Workflows
 
 on:
