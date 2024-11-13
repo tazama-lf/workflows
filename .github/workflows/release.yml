@@ -231,34 +231,6 @@ jobs:
           draft: false
           prerelease: false
 
-      # # Update the CHANGELOG.md file in the repository
-      # - name: Update CHANGELOG.md
-      #   run: |
-      #     NEW_VERSION=${{ steps.bump_version.outputs.new_version }}
-      #     CHANGELOG_CONTENTS=$(cat /home/runner/work/changelog.txt)
-      #     # Prepend the new changelog content to the existing CHANGELOG.md below SPDX-License-Identifier section
-      #     echo -e "$(head -n 2 CHANGELOG.md)\n\n## $NEW_VERSION\n\n$CHANGELOG_CONTENTS\n\n$(tail -n +3 CHANGELOG.md)" > CHANGELOG.md
-      #     git config --global user.name "github-actions[bot]"
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add CHANGELOG.md
-      #     git commit -m "chore: Update CHANGELOG.md for $NEW_VERSION"
-      #     git push origin HEAD:main
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-      # # Update the VERSION file
-      # - name: Update VERSION file
-      #   run: |
-      #     NEW_VERSION=${{ steps.bump_version.outputs.new_version }}
-      #     echo -e "# SPDX-License-Identifier: Apache-2.0\n\n$NEW_VERSION" > VERSION
-      #     git config --global user.name "github-actions[bot]"
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add VERSION
-      #     git commit -m "chore: Update VERSION to $NEW_VERSION"
-      #     git push origin HEAD:main
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
