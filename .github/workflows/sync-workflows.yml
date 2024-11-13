@@ -2,15 +2,19 @@
 
 # This GitHub Actions workflow syncs workflows from a central repository to other repositories when a pull request is merged.
 
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
 name: Sync Workflows
 
 on:
   pull_request:
     types: [closed]  # Trigger this workflow when a pull request is closed
     branches: [ "dev" ] # The branches below must be a subset of the branches above
+  workflow_dispatch:
 
 jobs:
-  sync:
+  Sync_All_Repos_Common_Workflows:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     if: github.event.pull_request.merged == true  # Run this job only if the pull request was merged
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
     steps:
@@ -47,7 +51,8 @@ jobs:
 
       - name: Sync Workflows to Other Repos  # Step to sync workflows to other repositories
         env:
-          REPOS: ${{ vars.TARGET_REPOS }}  # List of repositories to sync workflows to
+          REPOS: |  # List of repositories to sync workflows to
+            relay-service
           SPECIFIC_FILES: ${{ vars.SPECIFIC_FILES }}  # List of specific files not to copy to certain repositories
           SPECIFIC_REPOS: ${{ vars.SPECIFIC_REPOS }}  # List of specific repositories needing specific files not included
           PR_REVIEWERS: ${{ vars.PR_REVIEWERS }}  # List of reviewers
