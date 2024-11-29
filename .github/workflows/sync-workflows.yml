@@ -67,6 +67,7 @@ jobs:
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
+            rule-901
           SPECIFIC_FILES: dockerhub-image-build.yml  # List of specific files not to copy to certain repositories
           SPECIFIC_REPOS: |  # List of specific repositories needing specific files not included
             lumberjack
@@ -76,6 +77,7 @@ jobs:
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
+            rule-901
           PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
