@@ -51,6 +51,7 @@ jobs:
         env:
           REPOS: |  # List of repositories to sync workflows to
             relay-service
+            auth-service
             typology-processor
             event-director
             event-sidecar
@@ -66,9 +67,16 @@ jobs:
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
-          SPECIFIC_FILES: ${{ vars.SPECIFIC_FILES }}  # List of specific files not to copy to certain repositories
-          SPECIFIC_REPOS: ${{ vars.SPECIFIC_REPOS }}  # List of specific repositories needing specific files not included
-          PR_REVIEWERS: ${{ vars.PR_REVIEWERS }}  # List of reviewers
+          SPECIFIC_FILES: dockerhub-image-build.yml  # List of specific files not to copy to certain repositories
+          SPECIFIC_REPOS: |  # List of specific repositories needing specific files not included
+            lumberjack
+            batch-ppa
+            Full-Stack-Docker-Tazama
+            rule-executer
+            frms-coe-lib
+            frms-coe-startup-lib
+            auth-lib
+          PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
