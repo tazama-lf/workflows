@@ -13,7 +13,7 @@ on:
 
 jobs:
   Sync_All_Repos_Common_Workflows:
-    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]' && github.event.pull_request.merged == true
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
     steps:
       - name: Checkout Central Workflows Repo  # Step to checkout the repository containing the central workflows
