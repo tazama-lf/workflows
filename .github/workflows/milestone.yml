@@ -51,7 +51,7 @@ jobs:
             
       # Step to trigger another workflow for releasing, passing the milestone number.
       - name: Trigger Release Workflow
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
