@@ -68,8 +68,9 @@ jobs:
             frms-coe-startup-lib
             auth-lib
             rule-901
-          SPECIFIC_FILES: dockerhub-image-build.yml  # List of specific files not to copy to certain repositories
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # List of specific files not to copy to certain repositories
           SPECIFIC_REPOS: |  # List of specific repositories needing specific files not included
+            relay-service
             lumberjack
             batch-ppa
             Full-Stack-Docker-Tazama
