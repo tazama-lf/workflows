@@ -67,9 +67,17 @@ jobs:
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
+            auth-lib-provider-keycloak
             rule-901
-          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # List of specific files not to copy to certain repositories
-          SPECIFIC_REPOS: |  # List of specific repositories needing specific files not included
+            rule-902
+            tcs-lib
+            relay-service-integration-nats
+            relay-service-integration-rest
+            relay-service-integration-kafka
+            relay-service-integration-rabbitmq
+            audit-lib
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
+          SPECIFIC_REPOS: |  # Repos that do NOT build Docker images — receive all workflows except SPECIFIC_FILES
             relay-service
             lumberjack
             batch-ppa
@@ -78,15 +86,52 @@ jobs:
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
+            auth-lib-provider-keycloak
             rule-901
+            rule-902
+            tcs-lib
+            relay-service-integration-nats
+            relay-service-integration-rest
+            relay-service-integration-kafka
+            relay-service-integration-rabbitmq
+            audit-lib
+          PUBLISH_REPOS: |  # Library repos that publish npm packages — the only repos that receive publish.yml
+            frms-coe-lib
+            frms-coe-startup-lib
+            auth-lib
+            auth-lib-provider-keycloak
+            rule-901
+            rule-902
+            tcs-lib
+            relay-service-integration-nats
+            relay-service-integration-rest
+            relay-service-integration-kafka
+            relay-service-integration-rabbitmq
+            audit-lib
           PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
+
+          # Build the temp-workflows bundle once, outside the repo loop
+          mkdir -p temp-workflows
+          cp -r .github/workflows/* temp-workflows/
+          rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
+          rm -f temp-workflows/node.js.yml  # Remove per-repo CI workflow to avoid overwriting repo-specific benchmarks
+
           for repo in $REPOS; do
-            git clone https://github.com/frmscoe/$repo.git
+            # Library repos (PUBLISH_REPOS) are in tazama-lf org.
+            # Service repos are currently in frmscoe org.
+            # TODO: Migrate all service repos to tazama-lf and update this logic — tracked in tazama-lf/workflows#28
+            if [[ " ${PUBLISH_REPOS} " =~ " ${repo} " ]]; then
+              ORG="tazama-lf"
+            else
+              ORG="frmscoe"
+            fi
+
+            git clone https://github.com/$ORG/$repo.git
             cd $repo
-            git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/frmscoe/$repo.git
+            git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/$ORG/$repo.git
 
             if git ls-remote --heads origin sync-workflows-update | grep sync-workflows-update; then
               # Branch exists, pull the latest changes
@@ -98,42 +143,21 @@ jobs:
             fi
 
             cd ..
-            mkdir -p temp-workflows
-            cp -r .github/workflows/* temp-workflows/
-            rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
-            rm temp-workflows/node.js.yml  # Remove the node.js.yml to avoid removing benchmarking tests specific for each repo
             mkdir -p $repo/.github/workflows  # Create the workflows directory if it does not exist
-            
-            # Copy all files except the specific ones to certain repos
-            if [[ " ${SPECIFIC_REPOS} " =~ " ${repo} " ]]; then
-              for file in temp-workflows/*; do
-                if ! [[ " ${SPECIFIC_FILES} " =~ " $(basename $file) " ]]; then
-                  cp -r $file $repo/.github/workflows/
-                fi
-              done
-            else
-              cp -r temp-workflows/* $repo/.github/workflows/
-            fi
 
-            cd $repo
-            git add .
-            git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}" || echo "No changes to commit"
-            git push origin sync-workflows-update || git push origin sync-workflows-update --force
-            
-            # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
-            echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
-            unset GITHUB_TOKEN
-            gh auth login --with-token < /tmp/gh_token
-            
-            # Create the PR with reviewers
-            IFS=',' read -ra REVIEWERS <<< "${PR_REVIEWERS}"
-            REVIEWERS_ARGS=""
-            for reviewer in "${REVIEWERS[@]}"; do
-              REVIEWERS_ARGS+="--reviewer $reviewer "
+            # Unified copy: apply per-file rules before copying
+            for file in temp-workflows/*; do
+              filename=$(basename "$file")
+              # Docker workflows: skip for repos that don't build Docker images
+              if [[ " ${SPECIFIC_REPOS} " =~ " ${repo} " ]] && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
+                continue
+              fi
+              # publish.yml: only copy to designated library repos
+              if [[ "${filename}" == "publish.yml" ]] && ! [[ " ${PUBLISH_REPOS} " =~ " ${repo} " ]]; then
+                continue
+              fi
+              cp -r "$file" "$repo/.github/workflows/"
             done
-
-            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
-            
             # Cleanup
             rm /tmp/gh_token
             
