@@ -95,7 +95,7 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
-          PUBLISH_REPOS: |  # Library repos that publish npm packages — the only repos that receive publish.yml
+          PUBLISH_REPOS: |  # Library repos that publish npm packages — the only repos that receive publish.yml and version-check.yml
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
@@ -108,6 +108,9 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
+          RULE_REPOS: |  # Rule repos that receive caller stubs instead of full package-rule*.yml copies
+            rule-901
+            rule-902
           PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
@@ -156,15 +159,58 @@ jobs:
               if in_list "$repo" "$SPECIFIC_REPOS" && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
                 continue
               fi
-              # publish.yml: only copy to designated library repos
-              if [[ "${filename}" == "publish.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
+              # publish.yml, version-check.yml, and release-train.yml: only copy to designated library repos
+              if [[ "${filename}" == "publish.yml" || "${filename}" == "version-check.yml" || "${filename}" == "release-train.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
+                continue
+              fi
+              # package-rule*.yml canonical definitions: never copy to rule repos — stubs are stamped below
+              if in_list "$repo" "$RULE_REPOS" && [[ "${filename}" == package-rule*.yml ]]; then
                 continue
               fi
               cp -r "$file" "$repo/.github/workflows/"
             done
 
-            cd $repo
-            git add .
+            # Stamp caller stubs for rule repos (replaces the full per-repo copies)
+            if in_list "$repo" "$RULE_REPOS"; then
+              RULE_NUM="${repo#rule-}"  # strip "rule-" prefix → "901", "902"
+              # RC caller stub
+              printf '%s\n' \
+                '# SPDX-License-Identifier: Apache-2.0' \
+                '# This file is managed centrally — do not edit manually.' \
+                '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                'on:' \
+                '  push:' \
+                '    branches: [dev]' \
+                '  workflow_dispatch:' \
+                'jobs:' \
+                '  build:' \
+                "    uses: tazama-lf/workflows/.github/workflows/package-rule-rc.yml@dev" \
+                '    with:' \
+                "      rule_number: \"${RULE_NUM}\"" \
+                '      rule_org: "tazama-lf"' \
+                '    secrets: inherit' \
+                > "$repo/.github/workflows/package-rule-rc.yml"
+              # Stable caller stub
+              printf '%s\n' \
+                '# SPDX-License-Identifier: Apache-2.0' \
+                '# This file is managed centrally — do not edit manually.' \
+                '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                'on:' \
+                '  push:' \
+                '    branches: [main]' \
+                '  workflow_dispatch:' \
+                'jobs:' \
+                '  build:' \
+                "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@main" \
+                '    with:' \
+                "      rule_number: \"${RULE_NUM}\"" \
+                '      rule_org: "tazama-lf"' \
+                '    secrets: inherit' \
+                > "$repo/.github/workflows/package-rule.yml"
+              echo "Stamped caller stubs for rule-${RULE_NUM} (tazama-lf)"
+            fi
+            cd "$repo"
+            git add .github/workflows/
             git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}" || echo "No changes to commit"
             git push origin sync-workflows-update || git push origin sync-workflows-update --force
 
