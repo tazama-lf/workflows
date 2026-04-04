@@ -119,11 +119,15 @@ jobs:
           rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
           rm -f temp-workflows/node.js.yml  # Remove per-repo CI workflow to avoid overwriting repo-specific benchmarks
 
+          # Helper: check membership in a newline-delimited list (YAML block scalar)
+          # Space-delimited single-line vars (SPECIFIC_FILES) use the [[ =~ ]] pattern directly.
+          in_list() { echo "$2" | grep -Fxq "$1"; }
+
           for repo in $REPOS; do
             # Library repos (PUBLISH_REPOS) are in tazama-lf org.
             # Service repos are currently in frmscoe org.
             # TODO: Migrate all service repos to tazama-lf and update this logic — tracked in tazama-lf/workflows#28
-            if [[ " ${PUBLISH_REPOS} " =~ " ${repo} " ]]; then
+            if in_list "$repo" "$PUBLISH_REPOS"; then
               ORG="tazama-lf"
             else
               ORG="frmscoe"
@@ -149,17 +153,37 @@ jobs:
             for file in temp-workflows/*; do
               filename=$(basename "$file")
               # Docker workflows: skip for repos that don't build Docker images
-              if [[ " ${SPECIFIC_REPOS} " =~ " ${repo} " ]] && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
+              if in_list "$repo" "$SPECIFIC_REPOS" && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
                 continue
               fi
               # publish.yml: only copy to designated library repos
-              if [[ "${filename}" == "publish.yml" ]] && ! [[ " ${PUBLISH_REPOS} " =~ " ${repo} " ]]; then
+              if [[ "${filename}" == "publish.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
                 continue
               fi
               cp -r "$file" "$repo/.github/workflows/"
             done
+
+            cd $repo
+            git add .
+            git commit -m "ci: sync workflows from central-workflows ${SIGNED_OFF_BY}" || echo "No changes to commit"
+            git push origin sync-workflows-update || git push origin sync-workflows-update --force
+
+            # Clear the GITHUB_TOKEN environment variable and use a temporary file for gh authentication
+            echo "${{ secrets.GH_TOKEN }}" > /tmp/gh_token
+            unset GITHUB_TOKEN
+            gh auth login --with-token < /tmp/gh_token
+
+            # Create the PR with reviewers
+            IFS=',' read -ra REVIEWERS <<< "${PR_REVIEWERS}"
+            REVIEWERS_ARGS=""
+            for reviewer in "${REVIEWERS[@]}"; do
+              REVIEWERS_ARGS+="--reviewer $reviewer "
+            done
+
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
+
             # Cleanup
             rm /tmp/gh_token
-            
+
             cd ..
           done

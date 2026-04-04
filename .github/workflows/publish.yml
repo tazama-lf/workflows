@@ -50,7 +50,15 @@ jobs:
         run: npm run build
 
       - name: Publish package
-        run: npm publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" == *-* ]]; then
+            # Prerelease version (e.g. 1.2.3-rc.1): publish under the 'rc' dist-tag
+            # so it does not become the default 'latest' install target.
+            npm publish --tag rc
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
 
