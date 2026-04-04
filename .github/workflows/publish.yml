@@ -3,12 +3,14 @@
 # This workflow publishes an npm package to the GitHub Package Registry (@tazama-lf scope).
 #
 # Versioning policy:
-#   Developers are expected to set the version in package.json manually and publish the RC
-#   package before (or when) creating a PR. This workflow_dispatch trigger is a safety net
-#   for republishing from CI without a local environment.
+#   The version in package.json is the only signal used to determine the dist-tag:
+#     - Prerelease (X.Y.Z-rc.N)  → published under the 'rc' dist-tag  (triggered manually from dev)
+#     - Stable (X.Y.Z)           → published under 'latest' dist-tag   (triggered automatically on merge to main)
 #
-# Automatic latest-tag publishing (strip -rc.X, publish on merge to main) is tracked in:
-#   https://github.com/tazama-lf/workflows/issues/27
+#   Developers set the version in package.json manually. The version-check.yml workflow
+#   enforces that no prerelease version can merge to main.
+#
+# Resolves: https://github.com/tazama-lf/workflows/issues/27
 #
 # Please do not attempt to edit this flow without the direct consent from the DevOps team.
 # This file is managed centrally.
@@ -16,6 +18,9 @@
 name: Publish npm package to GitHub Packages
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
