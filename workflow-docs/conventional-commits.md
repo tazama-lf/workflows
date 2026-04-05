@@ -1,25 +1,73 @@
-## Workflow Name: PR Conventional Commit Validation
+# `conventional-commits.yml`
 
-#### Purpose: 
+## Purpose
 
-- This workflow automatically validates the title of a pull request (PR) to ensure it follows conventional commit guidelines. It also applies corresponding GitHub labels based on the commit type.
+Validates the PR title against the Conventional Commits specification and automatically applies a corresponding GitHub label (e.g. `bug`, `enhancement`, `CI/CD`) to the PR.
 
-- Uses the ytanikin/PRConventionalCommits@1.1.0 action.
+---
 
-- Validates the PR title against a set of predefined conventional commit types (e.g., feat, fix, docs).
+## Trigger
 
-- Maps these types to corresponding GitHub labels and applies them to the PR.
+| Event | Conditions |
+|-------|-----------|
+| `pull_request` | types: `[opened, synchronize, reopened, edited]` |
 
-- Utilizes a GitHub token for authentication and label management.
+---
 
-- This workflow helps enforce commit message conventions and improve PR management by automatically labeling PRs based on their titles.
+## Execution Context
 
-#### Trigger Events:
+| Property | Value |
+|----------|
+| Runner | `ubuntu-latest` |
+| Typical duration | ~20 s |
+| Concurrency | none |
+| Permissions | default (`GITHUB_TOKEN`) |
 
-`Pull Request Events`: The workflow is triggered when a pull request is opened, synchronized, reopened, or edited.
+---
 
-#### Workflow Steps:
+## Jobs
 
-- Checkout Code: Uses actions/checkout@v4 to check out the repository.
+### `validate-pr-title` — PR Conventional Commit Validation
 
-- PR Conventional Commit Validation:
+**Steps:**
+
+1. `actions/checkout@v4` — checks out source
+2. `ytanikin/PRConventionalCommits@1.1.0` — validates title; accepted types: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `feat!`; applies label on match
+
+---
+
+## Required Secrets
+
+None (uses auto-provided `GITHUB_TOKEN`).
+
+---
+
+## Sync Distribution
+
+| Group | Behaviour |
+|-------|----------|
+| All `REPOS` | Receives this file |
+
+---
+
+## Dependencies (pinned actions)
+
+| Action | Pinned SHA | Semver alias |
+|--------|-----------|----------|
+| `actions/checkout` | tag ref `v4` | — |
+| `ytanikin/PRConventionalCommits` | tag ref `1.1.0` | — |
+
+---
+
+## Known Limitations / Notes
+
+- `dependabot[bot]` actors are excluded.
+- GitHub labels must exist in the target repo before the action can apply them; the action will silently skip label creation if they are missing.
+
+---
+
+## Repository Overrides
+
+| Repository | Reason |
+|-----------|--------|
+| _(none)_ | _(all synced repos use the canonical version)_ |

@@ -1,83 +1,102 @@
-## Workflow Name: Node.js CI
+# `node.js.yml`
 
-#### Purpose:
+## Purpose
 
-- This GitHub workflow is designed for Continuous Integration (CI) of a Node.js project. It includes three jobs: building the project, checking the code style, and running tests. Here's a detailed breakdown of the workflow:
+Node.js CI pipeline with three parallel jobs — build, lint, and test — running against Node.js 20. Validates that the project compiles, passes linting rules, and all tests pass on every push and pull request to `dev` and `main`.
 
-#### Environment Variables
+---
 
-`env`:
+## Trigger
 
-`GH_TOKEN`: ${{ secrets.GITHUB_TOKEN }}: A secret token used to authenticate with GitHub, stored securely in GitHub secrets.
-NPM_SCOPE`: "@frmscoe": The scope for the npm packages, typically used for scoped packages.
+| Event | Conditions |
+|-------|-----------|
+| `push` | branches: `[dev, main]` |
+| `pull_request` | branches: `[dev, main]` |
 
-``NPM_REGISTRY`: "https://npm.pkg.github.com/": The npm registry URL where the scoped packages are hosted.
+---
 
-`NODE_ENV`: 'test': The environment variable used to specify the environment as 'test'.
+## Execution Context
 
-`STARTUP_TYPE`: 'nats': A custom environment variable indicating the type of startup, possibly related to the messaging system used in the project.
+| Property | Value |
+|----------|
+| Runner | `ubuntu-latest` |
+| Node version | `20` |
+| Typical duration | ~2–5 min |
+| Concurrency | none |
+| Permissions | default |
 
-#### Triggers Events
+---
 
-`push`:
+## Environment Variables
 
-`branches: [ "dev", "main" ]`: The workflow triggers on a push to the dev or main branches.
+| Variable | Value | Purpose |
+|----------|-------|--------|
+| `GH_TOKEN` | `secrets.GITHUB_TOKEN` | npm auth for private packages |
+| `NPM_SCOPE` | `@frmscoe` | npm scope for registry routing |
+| `NPM_REGISTRY` | `https://npm.pkg.github.com/` | GitHub Packages registry |
+| `NODE_ENV` | `test` | sets test environment |
+| `STARTUP_TYPE` | `nats` | messaging system type expected by some tests |
 
-`pull_request`:
+---
 
-`branches: [ "dev", "main" ]`: The workflow also triggers when a pull request is opened targeting the dev or main branches.
-Jobs
+## Jobs
 
-- The workflow is divided into three jobs: `build`, `lint`, and `test`.
+### `build` — run build
 
-1. Build Job
+1. `actions/checkout@v4`
+2. `actions/setup-node@v4` — Node 20, npm cache, registry and scope
+3. `npm ci`
+4. `npm run build`
 
-#### build:
+### `lint` — check style
 
-- runs-on: ubuntu-latest: This job runs on the latest available version of Ubuntu.
+1. `actions/checkout@v4`
+2. `actions/setup-node@v4`
+3. `npm ci`
+4. `npm run lint`
 
-- steps:
+### `test` — check tests
 
-Checkout the code:
+1. `actions/checkout@v4`
+2. `actions/setup-node@v4`
+3. `npm ci`
+4. `npm test`
 
-Install dependencies:
+---
 
-run: npm ci: Installs the project dependencies using npm in a clean environment.
+## Required Secrets
 
-Run build:
+| Secret | Scope | Purpose |
+|--------|-------|-------|
+| `GITHUB_TOKEN` | auto | npm authentication via `GH_TOKEN` |
 
-run: npm run build: Executes the build script to compile the project.
+---
 
-2. Lint Job
+## Sync Distribution
 
-#### lint:
+| Group | Behaviour |
+|-------|----------|
+| **All repos** | **Excluded from sync** — `node.js.yml` is explicitly removed before the sync bundle is assembled; every repo maintains its own copy |
 
-- runs-on: ubuntu-latest: The job runs on the latest Ubuntu version.
+---
 
-- steps:
+## Dependencies (pinned actions)
 
-Checkout code:
+| Action | Pinned SHA | Semver alias |
+|--------|-----------|----------|
+| `actions/checkout` | tag ref `v4` | — |
+| `actions/setup-node` | tag ref `v4` | — |
 
-Install dependencies:
+---
 
-Check linting:
+## Known Limitations / Notes
 
-3. Test Job
+- Excluded from sync to preserve per-repo customisations (some repos have additional jobs or environment-specific configurations). Any changes to the canonical file must be propagated manually to each repo (see `update-workflows.md` Track A6 / Track B4).
+- `NPM_SCOPE` is set to `@frmscoe`; this is intentional as many private packages are still published under the `@frmscoe` scope.
+- `dependabot[bot]` actors are excluded.
 
-#### test:
+---
 
-- runs-on: ubuntu-latest: The job runs on Ubuntu.
+## Repository Overrides
 
-steps:
-
-Checkout code:
-
-Install dependencies:
-
-Run tests:
-
-#### Summary
-
-- This workflow is a complete CI pipeline for a Node.js project. It tests the code on multiple Node.js versions, checks the code style, and runs the build process. 
-
-- The environment variables and registry settings are configured to work with a specific npm scope hosted on GitHub. The workflow runs on pushes and pull requests to the dev and main branches, ensuring continuous integration of the project code.
+Not applicable — this workflow is not synced; every repo maintains its own copy. Some repos previously had a `bench` job included in this file; that job is being removed via separate PRs.

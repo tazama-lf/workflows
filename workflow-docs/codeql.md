@@ -1,36 +1,81 @@
-## Workflow Name: CodeQL
+# `codeql.yml`
 
-#### Purpose: 
+## Purpose
 
-- This workflow automates the process of scanning code for vulnerabilities using GitHub's CodeQL analysis.
+Runs GitHub CodeQL semantic analysis on JavaScript/TypeScript source code, scanning for vulnerabilities and quality issues. Results are surfaced in the GitHub Security tab.
 
-#### Trigger Events:
+---
 
-`Push`: Runs on pushes to the dev and main branches.
+## Trigger
 
-`Pull Requests`: Runs on pull requests targeting dev and main.
+| Event | Conditions |
+|-------|-----------|
+| `push` | branches: `[dev, main]` |
+| `pull_request` | branches: `[dev, main]` |
+| `schedule` | `34 0 * * 4` (Thursday 00:34 UTC) |
 
-`Scheduled`: Runs every Thursday at 00:34 UTC.
+---
 
-#### Permissions:
+## Execution Context
 
-`actions: read`
+| Property | Value |
+|----------|
+| Runner | `ubuntu-latest` |
+| Typical duration | ~3–5 min |
+| Concurrency | none |
+| Permissions | `actions: read`, `contents: read`, `security-events: write` |
 
-`contents: read`
+---
 
-`security-events: write`
+## Jobs
 
-#### Workflow Steps:
+### `analyze` — Analyze
 
-- Checkout Repository: Uses actions/checkout@v4 to clone the repository.
-  
-- Initialize CodeQL: Prepares the CodeQL environment for the specified languages.
-  
-- Autobuild: Automatically builds the codebase (useful for compiled languages).
-  
-- Perform CodeQL Analysis: Executes the CodeQL scan and uploads results.
-  
-#### Language Support:
-The workflow is configured to scan JavaScript code but can be extended to support other languages like Java, Python, Go, etc.
+**Matrix:** `language: [javascript]`
 
-This setup ensures that your code is continuously analyzed for security vulnerabilities and quality issues.
+**Steps:**
+
+1. `actions/checkout@v4` — checks out source
+2. `github/codeql-action/init@v3` — initialises CodeQL toolchain for JavaScript
+3. `github/codeql-action/autobuild@v3` — automatically builds the project
+4. `github/codeql-action/analyze@v3` — performs analysis and uploads results
+
+---
+
+## Required Secrets
+
+None (uses default `GITHUB_TOKEN`).
+
+---
+
+## Sync Distribution
+
+| Group | Behaviour |
+|-------|----------|
+| All `REPOS` | Receives this file |
+
+---
+
+## Dependencies (pinned actions)
+
+| Action | Pinned SHA | Semver alias |
+|--------|-----------|----------|
+| `actions/checkout` | tag ref `v4` | — |
+| `github/codeql-action/init` | tag ref `v3` | — |
+| `github/codeql-action/autobuild` | tag ref `v3` | — |
+| `github/codeql-action/analyze` | tag ref `v3` | — |
+
+---
+
+## Known Limitations / Notes
+
+- Language matrix is fixed to `javascript`; CodeQL treats JS and TS together under the `javascript` language key — no change needed for TypeScript repos.
+- `dependabot[bot]` actors are excluded.
+
+---
+
+## Repository Overrides
+
+| Repository | Reason |
+|-----------|--------|
+| _(none)_ | _(all synced repos use the canonical version)_ |
