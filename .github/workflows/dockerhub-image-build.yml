@@ -47,13 +47,17 @@ jobs:
         run: |
           echo $REPO_NAME
 
+      - name: Get package version
+        id: pkg_version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf
         with:
           images: tazamaorg/${{ env.REPO_NAME }}
           tags: |
-            type=raw,value=2.1.0
+            type=raw,value=${{ steps.pkg_version.outputs.VERSION }}
 
       - name: Build and push Docker image
         id: push
