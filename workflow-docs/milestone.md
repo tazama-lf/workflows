@@ -1,31 +1,77 @@
-## Workflow Name: Milestone Workflow
+# `milestone.yml`
 
-#### Purpose: 
+## Purpose
 
-- This workflow is designed to close a specific milestone on GitHub and trigger a release workflow. It is manually triggered with a specified milestone ID.
+Closes a GitHub milestone and triggers the `release.yml` workflow via `repository_dispatch`, linking milestone completion to the automated release process.
 
-- This workflow streamlines the process of managing milestones and automates the transition to the release process.
+---
 
-#### Trigger Events:
+## Trigger
 
-`Workflow Dispatch`: This workflow is triggered manually with a milestoneId input.
+| Event | Conditions |
+|-------|-----------|
+| `workflow_dispatch` | input: `milestoneId` (required) |
 
-- Runs on: ubuntu-latest
+---
 
-#### Workflow Steps:
+## Execution Context
 
-- Checkout Repository:
+| Property | Value |
+|----------|-------|
+| Runner | `ubuntu-latest` |
+| Typical duration | ~30 s |
+| Concurrency | none |
+| Permissions | default (`GITHUB_TOKEN`) |
 
-Uses actions/checkout@v2 to clone the repository.
+---
 
-- Set Up Environment Variables:
+## Jobs
 
-Sets up necessary environment variables, including the GitHub token, milestone number, and GitHub API URL.
+### `close_milestone` — close milestone and trigger release
 
-- Close Milestone:
+**Steps:**
 
-Uses the GitHub API to close the specified milestone.
+1. `actions/checkout@v2` — checks out source
+2. `Set up environment variables` — sets `ACCESS_TOKEN`, `MILESTONE_NUMBER`, `API_URL`
+3. `Close Milestone` — calls `PATCH /repos/:repo/milestones/:number` with `{"state": "closed"}`
+4. `Trigger Release Workflow` — `peter-evans/repository-dispatch@v1` fires `release` event with `milestone_number` payload
 
-- Trigger Release Workflow:
+---
 
-Triggers another workflow for releasing, passing the milestone number as a payload using the peter-evans/repository-dispatch@v1 action.
+## Required Secrets
+
+None (uses auto-provided `GITHUB_TOKEN`).
+
+---
+
+## Sync Distribution
+
+| Group | Behaviour |
+|-------|----------|
+| All `REPOS` | Receives this file |
+
+---
+
+## Dependencies (pinned actions)
+
+| Action | Pinned SHA | Semver alias |
+|--------|-----------|----------|
+| `actions/checkout` | tag ref `v2` | — |
+| `peter-evans/repository-dispatch` | tag ref `v1` | — |
+
+---
+
+## Known Limitations / Notes
+
+- `dependabot[bot]` actors are excluded.
+- Uses `actions/checkout@v2` — should be upgraded to `v4` to align with all other workflows.
+- `peter-evans/repository-dispatch@v1` is not pinned to a SHA; should be pinned per GitHub hardening recommendations.
+- The milestone is closed before the release workflow is confirmed to have started; if the dispatch fails, the milestone remains closed without a release created.
+
+---
+
+## Repository Overrides
+
+| Repository | Reason |
+|-----------|--------|
+| _(none)_ | _(all synced repos use the canonical version)_ |

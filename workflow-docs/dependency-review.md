@@ -1,25 +1,72 @@
-## Workflow Name: Dependency Review
+# `dependency-review.yml`
 
-#### Purpose: 
+## Purpose
 
-- This workflow automatically reviews the dependencies of a project whenever a pull request (PR) is opened or updated, ensuring that new dependencies are checked for security vulnerabilities and other issues.
+Scans dependency manifest file changes in pull requests and blocks merging if newly added or updated dependencies contain known security vulnerabilities.
 
-- This workflow helps maintain the security and stability of your project by automatically reviewing new or updated dependencies in pull requests.
+---
 
-#### Trigger Events:
+## Trigger
 
-`Pull Request`: The workflow runs whenever a pull request is created or updated.
+| Event | Conditions |
+|-------|-----------|
+| `pull_request` | all types |
 
-#### Permissions:
+---
 
-`Contents`: read: Grants the action read-only access to the repository contents.
+## Execution Context
 
-- Runs on: ubuntu-latest
+| Property | Value |
+|----------|-------|
+| Runner | `ubuntu-latest` |
+| Typical duration | ~30 s |
+| Concurrency | none |
+| Permissions | `contents: read` |
 
-#### Workflow Steps:
+---
 
-- Checkout Repository:
+## Jobs
 
-- Dependency Review:
+### `dependency-review` — Dependency Review
 
-Uses actions/dependency-review-action@v4 to analyze the dependencies of the project and identify any potential issues.
+**Steps:**
+
+1. `actions/checkout@v4` — checks out source
+2. `actions/dependency-review-action@v4` — reviews dependency manifests; fails PR if vulnerable versions are introduced
+
+---
+
+## Required Secrets
+
+None.
+
+---
+
+## Sync Distribution
+
+| Group | Behaviour |
+|-------|----------|
+| All `REPOS` | Receives this file |
+
+---
+
+## Dependencies (pinned actions)
+
+| Action | Pinned SHA | Semver alias |
+|--------|-----------|----------|
+| `actions/checkout` | tag ref `v4` | — |
+| `actions/dependency-review-action` | tag ref `v4` | — |
+
+---
+
+## Known Limitations / Notes
+
+- Requires GitHub Advanced Security (or a public repo) for results to be enforced as a blocking check.
+
+---
+
+## Repository Overrides
+
+| Repository | Reason |
+|-----------|--------|
+| _(none)_ | _(all synced repos use the canonical version)_ |
