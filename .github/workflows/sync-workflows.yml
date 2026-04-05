@@ -79,7 +79,6 @@ jobs:
           SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
           SPECIFIC_REPOS: |  # Repos that do NOT build Docker images — receive all workflows except SPECIFIC_FILES
             relay-service
-            lumberjack
             batch-ppa
             Full-Stack-Docker-Tazama
             rule-executer
@@ -185,6 +184,8 @@ jobs:
                 'on:' \
                 '  push:' \
                 '    branches: [dev]' \
+                '  repository_dispatch:' \
+                '    types: [rule-executer-update]' \
                 '  workflow_dispatch:' \
                 'jobs:' \
                 '  build:' \
