@@ -248,7 +248,8 @@ To publish a library rc without waiting for a push event:
 
 1. Go to **Actions → Release train** in the target library repo.
 2. Click **Run workflow** from the `dev` branch; supply the target stable version (e.g. `4.0.0`, no prerelease suffix).
-3. After the workflow opens the release PR, strip the `-rc.N` suffix from `version` in `package.json` before requesting merge.
+3. The workflow sets `version` to the supplied value, resolves all internal rc dependencies to their stable equivalents, regenerates `package-lock.json`, commits everything via the GitHub API, and opens a `release/vX.Y.Z → main` PR automatically.
+4. Review the dependency changes and version bump in the PR, then merge. `publish.yml` fires automatically on the push to `main`.
 
 ### Creating a release (service repos)
 
