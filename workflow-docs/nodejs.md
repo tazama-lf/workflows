@@ -18,7 +18,7 @@ Node.js CI pipeline with three parallel jobs — build, lint, and test — runni
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Node version | `20` |
 | Typical duration | ~2–5 min |

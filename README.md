@@ -27,12 +27,12 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 
 ## Standard PR Check Suite
 
-The following checks run automatically on every pull request across all repo classes. They are defined once here and referenced throughout the SDLC sections below.
+The following checks run automatically on pull requests across all repo classes. They are defined once here and referenced throughout the SDLC sections below.
 
 | Workflow | What it checks |
 |----------|---------------|
-| `branch-target-check.yml` | PR base branch must be `dev` (or `main` for `release/v*` branches) |
-| `conventional-commits.yml` | Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) specification |
+| `branch-target-check.yml` | PR base branch must be `dev` or `release/v*` when targeting `main` — **fires on PRs to `main` only** |
+| `conventional-commits.yml` | PR title is validated against the [Conventional Commits](https://www.conventionalcommits.org/) specification |
 | `dco-check.yml` | All commits carry a DCO `Signed-off-by` trailer — ⚠️ [known issue #37](https://github.com/tazama-lf/workflows/issues/37) |
 | `gpg-verify.yml` | All commits are GPG-signed |
 | `codacy.yml` | Static analysis via Codacy CLI — ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
@@ -228,7 +228,7 @@ Most workflow files pin external actions to commit SHAs for supply-chain securit
 
 1. Update the canonical `.github/workflows/node.js.yml` in this repo.
 2. Apply the same change to each repo in `REPOS`, to `frmscoe/workflows`, and its 33 target repos.
-3. Track progress in [`update-workflows.md`](-Claude-docs/update-workflows.md) (private planning doc).
+3. Track progress in `update-workflows.md` (private planning doc, not committed to this repo).
 
 ### gh CLI version
 

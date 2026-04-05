@@ -18,7 +18,7 @@ Builds a Docker image and pushes it to Docker Hub with a version tag derived fro
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~5–8 min |
 | Concurrency | none |
@@ -37,7 +37,7 @@ Builds a Docker image and pushes it to Docker Hub with a version tag derived fro
 3. `Set ENV variables` — derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `Get package version` — reads `VERSION` from `package.json` via `node -p`; sets step output `VERSION`
 5. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` — generates tag: `type=raw,value=${{ steps.pkg_version.outputs.VERSION }}`
-6. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583298` — builds and pushes image; passes `GH_TOKEN` as build arg
+6. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` — builds and pushes image; passes `GH_TOKEN` as build arg
 7. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` — generates and pushes build attestation to Sigstore transparency log
 8. `Send Slack Notification` — posts to `SLACK_WEBHOOK_URL`
 

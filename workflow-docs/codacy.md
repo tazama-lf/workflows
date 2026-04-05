@@ -19,7 +19,7 @@ Performs a Codacy security scan of the codebase and uploads results in SARIF for
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~2–3 min |
 | Concurrency | none |

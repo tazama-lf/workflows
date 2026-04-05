@@ -17,7 +17,7 @@ Checks that every commit in a pull request includes a `Signed-off-by:` line, enf
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~20 s |
 | Concurrency | none |

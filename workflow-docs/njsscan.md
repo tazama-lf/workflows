@@ -19,7 +19,7 @@ Runs the njsscan (nodejsscan) static security scanner against the Node.js codeba
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~1–2 min |
 | Concurrency | none |

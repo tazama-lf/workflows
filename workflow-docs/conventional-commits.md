@@ -17,7 +17,7 @@ Validates the PR title against the Conventional Commits specification and automa
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~20 s |
 | Concurrency | none |

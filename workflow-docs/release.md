@@ -17,7 +17,7 @@ Automates the GitHub release creation process. Triggered by a `repository_dispat
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~1–2 min |
 | Concurrency | none |

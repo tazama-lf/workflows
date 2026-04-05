@@ -17,7 +17,7 @@ Verifies that every commit in a pull request has a valid GPG signature using the
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~20–30 s |
 | Concurrency | none |

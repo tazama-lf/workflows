@@ -19,7 +19,7 @@ Lints `Dockerfile` using Hadolint, a Haskell-based Dockerfile linter that enforc
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~30 s |
 | Concurrency | none |

@@ -18,7 +18,7 @@ Propagates canonical workflow files from this repository to all configured targe
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~10–30 min (scales with number of target repos) |
 | Concurrency | none |

@@ -17,7 +17,7 @@ Closes a GitHub milestone and triggers the `release.yml` workflow via `repositor
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~30 s |
 | Concurrency | none |

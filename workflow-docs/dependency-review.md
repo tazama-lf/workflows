@@ -17,7 +17,7 @@ Scans dependency manifest file changes in pull requests and blocks merging if ne
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~30 s |
 | Concurrency | none |

@@ -19,7 +19,7 @@ Runs GitHub CodeQL semantic analysis on JavaScript/TypeScript source code, scann
 ## Execution Context
 
 | Property | Value |
-|----------|
+|----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~3–5 min |
 | Concurrency | none |
