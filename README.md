@@ -241,7 +241,7 @@ The `gh` CLI in `sync-workflows.yml` is pinned to a hardcoded tarball URL. To up
 
 To publish a library rc without waiting for a push event:
 
-1. Go to **Actions → Publish npm package** in the target library repo.
+1. Go to **Actions → Publish npm package to GitHub Packages** in the target library repo.
 2. Click **Run workflow** from the `dev` branch.
 
 ### Running release-train
@@ -260,12 +260,12 @@ To publish a library rc without waiting for a push event:
 
 ### OSSF Scorecard
 
-`scorecard.yml` runs automatically on `push` and on a weekly schedule. To trigger it manually:
+`scorecard.yml` runs automatically on `push` to `main` or `dev`, on a weekly schedule (`branch_protection_rule` events also trigger it). To trigger it manually:
 
 1. Go to **Actions → Scorecard supply-chain security** in the target service repo.
 2. Click **Run workflow**.
 
-Results appear in **Security → Code scanning** only when triggered from `main`, a schedule, or a `branch_protection_rule` event.
+SARIF results always appear in **Security → Code scanning** regardless of trigger. The public Scorecard badge and REST API are only updated when triggered from `main`, a schedule, or a `branch_protection_rule` event (`publish_results=false` on `dev` pushes).
 
 ### Auditing sync coverage
 
