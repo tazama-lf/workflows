@@ -95,7 +95,7 @@ Service repos produce versioned Docker images. They do not publish npm packages.
 5. **AUTO** — `sbom.yml` fires on `push: main`; generates a Software Bill of Materials from the Docker image — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39).
 6. **Release manager — MANUAL** — triggers `milestone.yml` via `workflow_dispatch` in the service repo, supplying the milestone ID.
 7. **AUTO** — `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`.
-8. **AUTO** — `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, creates the GitHub release, and commits updates to `CHANGELOG.md` and `VERSION` — ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
+8. **AUTO** — `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, and creates the GitHub release with the changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository) — ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
 
 ---
 
@@ -179,7 +179,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `publish.yml` | Publish npm package to GitHub Packages | `push: [main]`, `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release-train.yml` | Resolve rc deps, prepare release PR, bump version | `workflow_dispatch` | `PUBLISH_REPOS` only |
-| `release.yml` | Create GitHub release, update `CHANGELOG.md` and `VERSION` | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
+| `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
 | `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
 | `scorecard.yml` | OSSF Scorecard supply-chain security | `push: [main,dev]`, schedule (weekly), `branch_protection_rule` | Service repos only (not `PUBLISH_REPOS`) |
 | `sync-workflows.yml` | Distribute canonical workflows to all target repos | `pull_request: [dev]`, `workflow_dispatch` | **Not synced** — canonical-only |
@@ -255,7 +255,7 @@ To publish a library rc without waiting for a push event:
 1. Merge all changes to `main`.
 2. Go to **Actions → Milestone Workflow** in the service repo.
 3. Click **Run workflow** and enter the milestone ID.
-4. `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`, which creates the GitHub release and updates `CHANGELOG.md` and `VERSION`.
+4. `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`, which creates the GitHub release with an auto-generated changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository).
 
 ### OSSF Scorecard
 
