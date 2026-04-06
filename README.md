@@ -95,7 +95,7 @@ Service repos produce versioned Docker images. They do not publish npm packages.
 5. **AUTO** — `sbom.yml` fires on `push: main`; generates a Software Bill of Materials from the Docker image — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39).
 6. **Release manager — MANUAL** — triggers `milestone.yml` via `workflow_dispatch` in the service repo, supplying the milestone ID.
 7. **AUTO** — `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`.
-8. **AUTO** — `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, creates the GitHub release, and commits updates to `CHANGELOG.md` and `VERSION` — ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
+8. **AUTO** — `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, and creates the GitHub release with the changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository) — ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
 
 ---
 
@@ -179,7 +179,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `publish.yml` | Publish npm package to GitHub Packages | `push: [main]`, `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release-train.yml` | Resolve rc deps, prepare release PR, bump version | `workflow_dispatch` | `PUBLISH_REPOS` only |
-| `release.yml` | Create GitHub release, update `CHANGELOG.md` and `VERSION` | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
+| `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
 | `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
 | `scorecard.yml` | OSSF Scorecard supply-chain security | `push: [main,dev]`, schedule (weekly), `branch_protection_rule` | Service repos only (not `PUBLISH_REPOS`) |
 | `sync-workflows.yml` | Distribute canonical workflows to all target repos | `pull_request: [dev]`, `workflow_dispatch` | **Not synced** — canonical-only |
@@ -208,6 +208,53 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 **Full `REPOS` list (26 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
+
+---
+
+## Adding Automation to a New Repository
+
+When a new repository is created in the Tazama ecosystem, it needs to be enrolled in sync so it receives canonical workflows automatically on future updates. The steps depend on the [repository class](#repository-classes).
+
+### Step 1 — Determine the repository class
+
+| Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml`? |
+|-------|----------------------------------|-----------------------------------------------|
+| Service repo (Docker-building) | ✅ Yes | ❌ No |
+| Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
+| Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Rule repo — tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Rule repo — frmscoe | n/a — managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows) | n/a |
+
+### Step 2 — Add the repo to `sync-workflows.yml` in this repo
+
+Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropriate `env` lists:
+
+- **Always**: add to `REPOS`
+- **Other service or library or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
+- **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
+- **tazama-lf rule repo**: also add to `RULE_REPOS`
+
+> Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) — full org migration pending).
+
+### Step 3 — Bootstrap the new repo's workflow directory
+
+`sync-workflows.yml` only runs against repos that already have a `.github/workflows/` directory. For a brand-new repo, copy the relevant workflows manually from this repo's `.github/workflows/` before raising the sync PR:
+
+1. Create `.github/workflows/` in the new repo.
+2. Copy all applicable workflow files (refer to the [Canonical Workflow Reference](#canonical-workflow-reference) table).
+3. If it is a tazama-lf rule repo, stamp the caller stubs for `package-rule-rc.yml` and `package-rule.yml` (see the stub templates in [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) under the `RULE_REPOS` block).
+4. Commit directly to `dev` in the new repo (or raise a bootstrap PR).
+5. Copy `node.js.yml` manually and customise it for the repo (it is never synced).
+
+### Step 4 — Open a PR to `dev` in this repo
+
+Raise a PR with the `sync-workflows.yml` changes from Step 2. When the PR is opened, `sync-workflows.yml` runs (due to the `pull_request: dev` trigger) and creates `sync-workflows-update` PRs in all existing repos — the new entry will be included.
+
+> ⚠️ Do not merge the sync PRs in target repos until this source PR is confirmed merged — see [known issue #36](https://github.com/tazama-lf/workflows/issues/36).
+
+### Step 5 — Update `workflow-docs/`
+
+Add a documentation file for any new canonical workflow using [`workflow-docs/docs-template.md`](workflow-docs/docs-template.md) as a starting point, and update the [Canonical Workflow Reference](#canonical-workflow-reference) table and [Sync Distribution](#sync-distribution) section if the new repo changes group membership.
 
 ---
 
@@ -241,30 +288,31 @@ The `gh` CLI in `sync-workflows.yml` is pinned to a hardcoded tarball URL. To up
 
 To publish a library rc without waiting for a push event:
 
-1. Go to **Actions → Publish npm package** in the target library repo.
+1. Go to **Actions → Publish npm package to GitHub Packages** in the target library repo.
 2. Click **Run workflow** from the `dev` branch.
 
 ### Running release-train
 
 1. Go to **Actions → Release train** in the target library repo.
 2. Click **Run workflow** from the `dev` branch; supply the target stable version (e.g. `4.0.0`, no prerelease suffix).
-3. After the workflow opens the release PR, strip the `-rc.N` suffix from `version` in `package.json` before requesting merge.
+3. The workflow sets `version` to the supplied value, resolves all internal rc dependencies to their stable equivalents, regenerates `package-lock.json`, commits everything via the GitHub API, and opens a `release/vX.Y.Z → main` PR automatically.
+4. Review the dependency changes and version bump in the PR, then merge. `publish.yml` fires automatically on the push to `main`.
 
 ### Creating a release (service repos)
 
 1. Merge all changes to `main`.
 2. Go to **Actions → Milestone Workflow** in the service repo.
 3. Click **Run workflow** and enter the milestone ID.
-4. `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`, which creates the GitHub release and updates `CHANGELOG.md` and `VERSION`.
+4. `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`, which creates the GitHub release with an auto-generated changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository).
 
 ### OSSF Scorecard
 
-`scorecard.yml` runs automatically on `push` and on a weekly schedule. To trigger it manually:
+`scorecard.yml` runs automatically on `push` to `main` or `dev`, on a weekly schedule (`branch_protection_rule` events also trigger it). To trigger it manually:
 
 1. Go to **Actions → Scorecard supply-chain security** in the target service repo.
 2. Click **Run workflow**.
 
-Results appear in **Security → Code scanning** only when triggered from `main`, a schedule, or a `branch_protection_rule` event.
+SARIF results always appear in **Security → Code scanning** regardless of trigger. The public Scorecard badge and REST API are only updated when triggered from `main`, a schedule, or a `branch_protection_rule` event (`publish_results=false` on `dev` pushes).
 
 ### Auditing sync coverage
 
