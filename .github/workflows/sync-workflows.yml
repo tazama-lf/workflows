@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+﻿# SPDX-License-Identifier: Apache-2.0
 
 # This GitHub Actions workflow syncs workflows from a central repository to other repositories when a pull request is merged.
 
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner for the job
     steps:
       - name: Checkout Central Workflows Repo  # Step to checkout the repository containing the central workflows
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false
 
