@@ -36,7 +36,7 @@ Propagates canonical workflow files from this repository to all configured targe
 | `PUBLISH_REPOS` | Library repos that receive `publish.yml`, `version-check.yml`, `release-train.yml` but not `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` — receive caller stubs for `package-rule*.yml` instead of the full canonical |
 
-**Org routing:** Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are currently cloned from `frmscoe`. Full service-repo migration is tracked in [workflows#28](https://github.com/tazama-lf/workflows/issues/28).
+**Org routing:** All repos in `REPOS` are cloned from the `tazama-lf` org.
 
 ---
 
@@ -50,7 +50,7 @@ Propagates canonical workflow files from this repository to all configured targe
 2. `Set up Git` — configures git identity for commits
 3. `Install GitHub CLI` — downloads and installs `gh` CLI v2.14.7
 4. `Get PR author details` — captures author name and email for commit attribution
-5. `Sync Workflows to Other Repos` — main loop: clones each repo, checks out or creates `sync-workflows-update` branch, applies per-file sync rules, commits changes, pushes, opens PR
+5. `Sync Workflows to Other Repos` — main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, commits changes, pushes, opens PR. **`sync-workflows-update` is a reserved branch name** — do not use it for regular development contributions.
 
 ---
 
@@ -81,9 +81,10 @@ Propagates canonical workflow files from this repository to all configured targe
 
 ## Known Limitations / Notes
 
-- Service repo org URLs still use `frmscoe` (not `tazama-lf`); tracked in [workflows#28](https://github.com/tazama-lf/workflows/issues/28).
 - `gh` CLI is pinned to v2.14.7 via a direct tarball download; should be updated periodically.
 - The workflow fires on all `pull_request` events to `dev`, not just merged ones. This means unmerged PRs trigger sync branches in target repos; reviewers in those repos should not merge `sync-workflows-update` PRs until the source PR is merged.
+- **`sync-workflows-update` is a reserved branch name.** The workflow deletes and recreates it on every run. Do not use this name for regular development contributions; any pushed commits will be discarded on the next sync run.
+- Target repos must have a `dev` branch. If absent, the workflow creates one from the repo’s default branch automatically.
 - `dependabot[bot]` actors are excluded.
 
 ---
