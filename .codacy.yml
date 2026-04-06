@@ -13,3 +13,5 @@ engines:
     enabled: false
   prettier:
     enabled: false
+  codeql:
+    enabled: false
