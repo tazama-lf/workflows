@@ -211,6 +211,53 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 ---
 
+## Adding Automation to a New Repository
+
+When a new repository is created in the Tazama ecosystem, it needs to be enrolled in sync so it receives canonical workflows automatically on future updates. The steps depend on the [repository class](#repository-classes).
+
+### Step 1 — Determine the repository class
+
+| Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml`? |
+|-------|----------------------------------|-----------------------------------------------|
+| Service repo (Docker-building) | ✅ Yes | ❌ No |
+| Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
+| Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Rule repo — tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Rule repo — frmscoe | n/a — managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows) | n/a |
+
+### Step 2 — Add the repo to `sync-workflows.yml` in this repo
+
+Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropriate `env` lists:
+
+- **Always**: add to `REPOS`
+- **Other service or library or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
+- **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
+- **tazama-lf rule repo**: also add to `RULE_REPOS`
+
+> Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) — full org migration pending).
+
+### Step 3 — Bootstrap the new repo's workflow directory
+
+`sync-workflows.yml` only runs against repos that already have a `.github/workflows/` directory. For a brand-new repo, copy the relevant workflows manually from this repo's `.github/workflows/` before raising the sync PR:
+
+1. Create `.github/workflows/` in the new repo.
+2. Copy all applicable workflow files (refer to the [Canonical Workflow Reference](#canonical-workflow-reference) table).
+3. If it is a tazama-lf rule repo, stamp the caller stubs for `package-rule-rc.yml` and `package-rule.yml` (see the stub templates in [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) under the `RULE_REPOS` block).
+4. Commit directly to `dev` in the new repo (or raise a bootstrap PR).
+5. Copy `node.js.yml` manually and customise it for the repo (it is never synced).
+
+### Step 4 — Open a PR to `dev` in this repo
+
+Raise a PR with the `sync-workflows.yml` changes from Step 2. When the PR is opened, `sync-workflows.yml` runs (due to the `pull_request: dev` trigger) and creates `sync-workflows-update` PRs in all existing repos — the new entry will be included.
+
+> ⚠️ Do not merge the sync PRs in target repos until this source PR is confirmed merged — see [known issue #36](https://github.com/tazama-lf/workflows/issues/36).
+
+### Step 5 — Update `workflow-docs/`
+
+Add a documentation file for any new canonical workflow using [`workflow-docs/docs-template.md`](workflow-docs/docs-template.md) as a starting point, and update the [Canonical Workflow Reference](#canonical-workflow-reference) table and [Sync Distribution](#sync-distribution) section if the new repo changes group membership.
+
+---
+
 ## Routine Maintenance
 
 ### Pinned action SHA updates
