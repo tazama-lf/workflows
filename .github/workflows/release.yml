@@ -18,7 +18,7 @@ jobs:
     steps:
       # Checkout the main branch with all history
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4 (upgraded from v2)
         with:
           ref: main
           fetch-depth: 0 # Fetch all tags
