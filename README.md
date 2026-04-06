@@ -209,6 +209,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
+> ⚠️ **`sync-workflows-update` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` in every target repo. Do not use this name for regular development contributions — the sync workflow will delete it and recreate it fresh from `dev` on every run. If you have an open `sync-workflows-update` branch in a target repo, be aware it will be force-replaced the next time the workflow runs.
+
 ---
 
 ## Routine Maintenance
