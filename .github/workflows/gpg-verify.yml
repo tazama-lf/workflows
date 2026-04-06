@@ -21,11 +21,16 @@ jobs:
         fetch-depth: 0  # Fetch all history for all branches to ensure we have the full commit history
 
     - name: Set up environment variables
+      env:
+        PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
       run: |
-        echo "PR_HEAD_REF=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-        echo "PR_BASE_REF=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
-        echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
-        echo "GITHUB_REPOSITORY=${{ github.repository }}" >> $GITHUB_ENV
+        printf 'PR_HEAD_REF=%s\n' "$PR_HEAD_REF" >> "$GITHUB_ENV"
+        printf 'PR_BASE_REF=%s\n' "$PR_BASE_REF" >> "$GITHUB_ENV"
+        printf 'GITHUB_TOKEN=%s\n' "$GH_TOKEN" >> "$GITHUB_ENV"
+        printf 'GITHUB_REPOSITORY=%s\n' "$GH_REPO" >> "$GITHUB_ENV"
 
     - name: Check GPG verification status  # Step to check each commit for GPG signature verification
       run: |

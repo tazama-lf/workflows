@@ -23,7 +23,7 @@ jobs:
     steps:
       # Step to check out the repository code.
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         
       # Step to set up environment variables required for the script.
       - name: Set up environment variables
