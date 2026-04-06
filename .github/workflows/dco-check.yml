@@ -22,9 +22,12 @@ jobs:
         fetch-depth: 0  # Fetch all history for all branches to ensure complete commit history is available
 
     - name: Set up environment variables
+      env:
+        PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       run: |
-        echo "BASE_BRANCH=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
-        echo "HEAD_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+        printf 'BASE_BRANCH=%s\n' "$PR_BASE_REF" >> "$GITHUB_ENV"
+        printf 'HEAD_BRANCH=%s\n' "$PR_HEAD_REF" >> "$GITHUB_ENV"
 
     # Step to check each commit in the pull request for a Signed-off-by line
     - name: Check for DCO Sign-off
@@ -33,8 +36,8 @@ jobs:
         base_branch=$BASE_BRANCH
         head_branch=$HEAD_BRANCH
 
-        # Get the list of commit hashes between the head branch and base branch
-        commits=$(git log --pretty=format:%H origin/${head_branch}..origin/${base_branch})
+        # Get the list of commit hashes introduced by this PR (head commits not yet in base)
+        commits=$(git log --pretty=format:%H origin/${base_branch}..origin/${head_branch})
         non_compliant_commits=""
 
         # Loop through each commit and check for the Signed-off-by line
