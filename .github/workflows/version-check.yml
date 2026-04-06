@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
 
 # Blocks a PR from merging to main if package.json contains a prerelease
 # version suffix (e.g. -rc.1). The developer must strip the suffix manually

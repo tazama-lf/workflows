@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
 
 # This GitHub Actions workflow is designed to close a milestone and trigger a release workflow.
 

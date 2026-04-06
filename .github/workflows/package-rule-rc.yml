@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
 
 # Reusable workflow: builds and pushes an RC Docker image for a rule processor.
 #
