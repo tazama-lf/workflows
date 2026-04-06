@@ -1,0 +1,15 @@
+---
+# Codacy tool configuration for tazama-lf/workflows.
+# This repo contains only YAML workflow files and Markdown documentation.
+# Disable all JavaScript/TypeScript engines to avoid false "no files to analyse" failures.
+engines:
+  eslint:
+    enabled: false
+  jshint:
+    enabled: false
+  tslint:
+    enabled: false
+  stylelint:
+    enabled: false
+  prettier:
+    enabled: false
