@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+﻿# SPDX-License-Identifier: Apache-2.0
 
 # This GitHub Actions workflow is designed to close a milestone and trigger a release workflow.
 
@@ -51,7 +51,7 @@ jobs:
             
       # Step to trigger another workflow for releasing, passing the milestone number.
       - name: Trigger Release Workflow
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@ce5485de42c9b2622d2ed064be479e8ed65e76f4  # v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
