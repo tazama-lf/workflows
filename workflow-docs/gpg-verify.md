@@ -33,7 +33,7 @@ Verifies that every commit in a pull request has a valid GPG signature using the
 
 1. `actions/checkout@v4` — full history fetch (`fetch-depth: 0`)
 2. `Set up environment variables` — captures `PR_HEAD_REF`, `PR_BASE_REF`, `GITHUB_TOKEN`, `GITHUB_REPOSITORY`
-3. `Check GPG verification status` — iterates commits via `git log`; queries `/repos/:repo/commits/:sha/check-runs` for each; fails if any GPG check run conclusion is not `success`
+3. `Check GPG verification status` — iterates commits via `git log origin/${PR_BASE_REF}..origin/${PR_HEAD_REF}`; queries `/repos/:repo/commits/:sha` for each and checks `.commit.verification.verified`; fails if any commit is unverified
 
 ---
 
@@ -61,9 +61,9 @@ None (uses auto-provided `GITHUB_TOKEN`).
 
 ## Known Limitations / Notes
 
-- `dependabot[bot]` actors are excluded.
-- The check queries the `check-runs` API endpoint for each commit individually, which may hit API rate limits on large PRs.
-- The lookup relies on a check run named `"GPG verify"` already existing. On first-run PRs there may be a race condition where the check run is not yet present, causing spurious failures.
+- `dependabot[bot]`, `dependabot-preview[bot]`, and `github-actions[bot]` actors are excluded — these automated actors do not have GPG keys and will never produce signed commits.
+- An empty commit range (e.g. no new commits on the head branch) is handled gracefully — the step exits 0 without failing.
+- GPG verification is checked via the GitHub commit API (`.commit.verification.verified`), which uses the committer's GitHub-linked public key. Local GPG keyrings on the runner are not required.
 
 ---
 

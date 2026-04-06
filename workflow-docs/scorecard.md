@@ -10,7 +10,7 @@ Runs the OSSF Scorecard supply-chain security analysis to assess repository secu
 
 | Event | Conditions |
 |-------|-----------|
-| `push` | branches: `[main, dev]` |
+| `push` | branches: `[main]` |
 | `schedule` | `15 16 * * 0` (Sunday 16:15 UTC) |
 | `branch_protection_rule` | any change to branch protection rules |
 
@@ -35,7 +35,7 @@ Runs the OSSF Scorecard supply-chain security analysis to assess repository secu
 **Steps:**
 
 1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — checks out source (`persist-credentials: false`)
-2. `ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a` — runs analysis; outputs `results.sarif`; `publish_results=true` only on `main`, `schedule`, or `branch_protection_rule` events — dev-branch runs score the repo but do not overwrite the published badge
+2. `ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a` — runs analysis; outputs `results.sarif`; `publish_results=true` only on `main`, `schedule`, or `branch_protection_rule` events
 3. `actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f` — uploads `results.sarif` artifact (5-day retention)
 4. `github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc` — uploads SARIF to code scanning dashboard
 
@@ -70,7 +70,7 @@ None (uses GitHub OIDC token via `id-token: write`).
 ## Known Limitations / Notes
 
 - Scorecard enforces strict constraints: no workflow-level `env` or `defaults`; workflow permissions must be `read-all`; `id-token: write` is only permitted at job level.
-- `publish_results` is intentionally `false` on `dev` branch pushes — the public badge and REST API always reflect the default branch score only.
+- `ossf/scorecard-action@v2.4.3` enforces that it can only run on the repository's default branch, regardless of the `publish_results` setting. Triggering on `dev` causes the action to fail with `Only the default branch main is supported`. For this reason `dev` is excluded from the push trigger. Fixes [#44](https://github.com/tazama-lf/workflows/issues/44).
 - Depends on tazama-lf/technical-steering-committee#14 (default branch switch from `dev` to `main`) for the OSSF badge to display the correct score.
 
 ---
