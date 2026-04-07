@@ -101,6 +101,10 @@ jobs:
         env:
           MILESTONE_NUMBER: ${{ github.event.client_payload.milestone_number }}
         run: |
+          if [[ -z "$MILESTONE_NUMBER" ]]; then
+            echo "::error::MILESTONE_NUMBER is not set in client_payload"
+            exit 1
+          fi
           MILESTONE_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_NUMBER}")
           MILESTONE_TITLE=$(echo "$MILESTONE_RESPONSE" | jq -r '.title')
           MILESTONE_DESCRIPTION=$(echo "$MILESTONE_RESPONSE" | jq -r '.description')
