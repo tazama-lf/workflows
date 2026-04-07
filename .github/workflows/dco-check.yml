@@ -46,7 +46,7 @@ jobs:
         # Loop through each commit and check for the Signed-off-by line
         for commit in $commits; do
           # Check if the commit message contains the Signed-off-by line
-          if ! git show --quiet --format=%B $commit | grep -q "^Signed-off-by: "; then
+          if ! git show --quiet --format=%B "$commit" | grep -q "^Signed-off-by: "; then
             # If not, add the commit hash to the list of non-compliant commits
             non_compliant_commits="$non_compliant_commits $commit"
           fi
