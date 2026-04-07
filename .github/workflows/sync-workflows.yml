@@ -27,14 +27,6 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           git config --global credential.helper store
 
-      - name: Install GitHub CLI  # Step to install GitHub CLI for creating pull requests
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl
-          curl -fsSL https://github.com/cli/cli/releases/download/v2.14.7/gh_2.14.7_linux_amd64.tar.gz -o ghcli.tar.gz 
-          tar -xzf ghcli.tar.gz
-          sudo cp gh_2.14.7_linux_amd64/bin/gh /usr/local/bin/
-
       - name: Get PR author details  # Step to get the details of the pull request author
         id: pr_author
         env:
