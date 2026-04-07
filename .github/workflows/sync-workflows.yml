@@ -39,7 +39,9 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_SIGNING_KEY }}" > ~/.ssh/signing_key
+          # Strip Windows-style \r\n line endings that may be introduced when the secret
+          # is set from a Windows machine, which would cause ssh-keygen to reject the key.
+          printf '%s' "${{ secrets.SSH_SIGNING_KEY }}" | tr -d '\r' > ~/.ssh/signing_key
           chmod 600 ~/.ssh/signing_key
           # Validate the key is a usable Ed25519/RSA private key before enabling signing.
           ssh-keygen -y -f ~/.ssh/signing_key > /dev/null || {
