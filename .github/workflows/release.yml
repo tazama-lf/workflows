@@ -101,9 +101,9 @@ jobs:
       - name: Get Milestone Details
         id: get_milestone
         env:
-          MILESTONE_ID: ${{ github.event.client_payload.milestone_number }}
+          MILESTONE_NUMBER: ${{ github.event.client_payload.milestone_number }}
         run: |
-          MILESTONE_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_ID}")
+          MILESTONE_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_NUMBER}")
           MILESTONE_TITLE=$(echo "$MILESTONE_RESPONSE" | jq -r '.title')
           MILESTONE_DESCRIPTION=$(echo "$MILESTONE_RESPONSE" | jq -r '.description')
           MILESTONE_DATE=$(echo "$MILESTONE_RESPONSE" | jq -r '.due_on')
