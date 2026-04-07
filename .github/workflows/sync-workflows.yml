@@ -30,6 +30,16 @@ jobs:
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
           git config --global credential.helper store
+          # Configure SSH commit signing so sync commits show as Verified on GitHub.
+          # SSH_SIGNING_KEY must be stored as an org/repo secret (private key, no passphrase).
+          # The corresponding public key must be registered as a Signing Key on the GitHub account
+          # that GH_TOKEN belongs to: Settings → SSH and GPG keys → New signing key.
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_SIGNING_KEY }}" > ~/.ssh/signing_key
+          chmod 600 ~/.ssh/signing_key
+          git config --global gpg.format ssh
+          git config --global user.signingkey ~/.ssh/signing_key
+          git config --global commit.gpgsign true
 
       - name: Get actor details  # Step to get the triggering actor's details for the Signed-off-by line
         id: pr_author
