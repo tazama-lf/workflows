@@ -44,11 +44,18 @@ jobs:
 
         # Check the GPG verification status of each commit via the GitHub commit API
         for commit in $commits; do
-          verified=$(curl -s --max-time 10 \
+          response=$(curl -s --max-time 10 --fail \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$commit \
-            | jq -r '.commit.verification.verified')
+            https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$commit)
+          curl_exit=$?
+
+          if [[ $curl_exit -ne 0 ]]; then
+            echo "GitHub API request failed for commit $commit (curl exit $curl_exit). Check network or API availability."
+            exit 1
+          fi
+
+          verified=$(echo "$response" | jq -r '.commit.verification.verified')
 
           # If the commit is not verified, list it and exit with a non-zero status
           if [[ "$verified" != "true" ]]; then
