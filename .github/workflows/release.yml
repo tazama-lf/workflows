@@ -7,9 +7,6 @@ name: Release Workflow
 on:
   repository_dispatch:
     types: [release]
-    properties:
-      milestone_number:
-        type: string
 
 jobs:
   release:
