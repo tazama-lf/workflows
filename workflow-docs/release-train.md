@@ -49,7 +49,7 @@ Prepares a library release PR from `dev` → `main`. Given a target stable versi
 
 | Secret | Scope | Purpose |
 |--------|-------|---------|
-| `GH_TOKEN_LIB` | org | API commits, npm install auth, PR creation |
+| `GH_TOKEN_LIB` | org | API commits, npm install auth, PR creation — classic PAT requires `repo`, `workflow`, `read:packages` |
 
 ---
 
@@ -76,6 +76,7 @@ Prepares a library release PR from `dev` → `main`. Given a target stable versi
 - `checkov:skip=CKV_GHA_7` annotation suppresses a false-positive: the `version` input controls only the release branch name and `package.json` version — not the build artifact source.
 - If `release/v<N>` already exists it is force-reset to the current `dev` HEAD, enabling idempotent reruns without manual cleanup.
 - The PR body does not include an auto-generated changelog; reviewers should compare `dev` to `main` manually before approving.
+- **`GH_TOKEN_LIB` required scopes (classic PAT):** `repo` (covers creating commits via the GitHub REST API, creating/resetting the `release/v<N>` branch, and opening the PR to main — equivalent to `contents: write` + `pull-requests: write` in fine-grained token terms), `workflow` (required when any commit touches `.github/workflows/` files), and `read:packages` (npm install from GitHub Packages). Commits created via the GitHub API with a token bearing the `repo` scope are automatically marked **Verified** by GitHub — no GPG signing key is needed on the runner.
 
 ---
 

@@ -80,8 +80,11 @@ jobs:
 
       - name: Clone Rule Executer repository (dev branch)
         run: |
+          git config --global url."https://x-access-token:${GH_TOKEN_LIB}@github.com/".insteadOf "https://github.com/"
           git clone https://github.com/tazama-lf/rule-executer -b dev rule-executer
           echo "Rule Executer clone complete."
+        env:
+          GH_TOKEN_LIB: ${{ secrets.GH_TOKEN_LIB }}
 
       - name: Prepare rule-executer-${{ inputs.rule_number }}
         run: |

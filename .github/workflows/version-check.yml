@@ -30,7 +30,15 @@ jobs:
 
       - name: Reject prerelease version on main PR
         run: |
-          VERSION=$(jq -r '.version' package.json)
+          if [ ! -f package.json ]; then
+            echo "❌ package.json not found"
+            exit 1
+          fi
+          VERSION=$(jq -r '.version // empty' package.json)
+          if [ -z "$VERSION" ]; then
+            echo "❌ No version field in package.json"
+            exit 1
+          fi
           if [[ "$VERSION" == *-* ]]; then
             echo "❌ package.json version '$VERSION' contains a prerelease suffix."
             echo "   Strip the suffix (e.g. change '$VERSION' → '${VERSION%-*}') before merging to main."

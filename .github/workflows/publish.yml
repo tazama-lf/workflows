@@ -69,10 +69,11 @@ jobs:
 
       # Send Slack notification — requires SLACK_WEBHOOK_URL org/repo secret
       - name: Send Slack notification
+        continue-on-error: true
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -s -X POST -H 'Content-type: application/json' --data '{
+          curl --fail -sS -X POST -H 'Content-type: application/json' --data '{
             "blocks": [
               {
                 "type": "header",
@@ -96,4 +97,4 @@ jobs:
                 ]
               }
             ]
-          }' "$SLACK_WEBHOOK_URL" || true
+          }' "$SLACK_WEBHOOK_URL"
