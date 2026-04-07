@@ -231,7 +231,9 @@ jobs:
               REVIEWERS_ARGS+="--reviewer $reviewer "
             done
 
-            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository. ${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
+            gh pr create --title "ci: sync workflows from central-workflows" --body "This PR syncs workflows from the central-workflows repository.
+
+${SIGNED_OFF_BY}" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
 
             cd ..
           done
