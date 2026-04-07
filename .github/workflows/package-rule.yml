@@ -141,7 +141,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd "rule-executer-${{ inputs.rule_number }}"
-          npm ci
+          npm install
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
 
