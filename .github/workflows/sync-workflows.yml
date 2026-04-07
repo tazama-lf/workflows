@@ -160,7 +160,7 @@ jobs:
               if in_list "$repo" "$RULE_REPOS" && [[ "${filename}" == package-rule*.yml ]]; then
                 continue
               fi
-              # scorecard.yml: only copy to service repos â€" skip library/npm repos and rule repos
+              # scorecard.yml: only copy to service repos — skip library/npm repos and rule repos
               if [[ "${filename}" == "scorecard.yml" ]] && in_list "$repo" "$PUBLISH_REPOS"; then
                 continue
               fi
