@@ -39,7 +39,7 @@ jobs:
       - name: Close Milestone
         run: |
           # Use the environment variables set up earlier to make the API call.
-          curl -X PATCH \
+          curl --fail -s -X PATCH \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -d '{"state": "closed"}' \
