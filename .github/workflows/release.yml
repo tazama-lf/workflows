@@ -46,7 +46,7 @@ jobs:
           PREV_VERSION=$(git describe --abbrev=0 --tags)
           echo "Previous Version: $PREV_VERSION"
           
-          COMMIT_MESSAGES=$(git log $PREV_VERSION^..HEAD --format=%B)
+          COMMIT_MESSAGES=$(git log $PREV_VERSION..HEAD --format=%B)
           echo "Commit Messages: $COMMIT_MESSAGES"
           
           # Determine release type based on commit messages and labels
@@ -100,10 +100,10 @@ jobs:
       # Get the milestone details
       - name: Get Milestone Details
         id: get_milestone
+        env:
+          MILESTONE_ID: ${{ github.event.client_payload.milestone_number }}
         run: |
-          # Retrieve the milestone ID from the workflow input
-          MILESTONE_ID=${{ github.event.client_payload.milestone_number }}
-          MILESTONE_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_ID}")
+          MILESTONE_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_ID}")
           MILESTONE_TITLE=$(echo "$MILESTONE_RESPONSE" | jq -r '.title')
           MILESTONE_DESCRIPTION=$(echo "$MILESTONE_RESPONSE" | jq -r '.description')
           MILESTONE_DATE=$(echo "$MILESTONE_RESPONSE" | jq -r '.due_on')
