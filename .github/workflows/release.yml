@@ -43,7 +43,7 @@ jobs:
       - name: Determine Release Type
         id: determine_release
         run: |
-          PREV_VERSION=$(git describe --abbrev=0 --tags)
+          PREV_VERSION=$(git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0")
           echo "Previous Version: $PREV_VERSION"
           
           COMMIT_MESSAGES=$(git log $PREV_VERSION..HEAD --format=%B)
@@ -69,7 +69,7 @@ jobs:
       - name: Bump Version
         id: bump_version
         run: |
-          PREV_VERSION=$(git describe --abbrev=0 --tags)
+          PREV_VERSION=$(git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0")
           echo "Previous Version: $PREV_VERSION"
           
           RELEASE_TYPE=${{ steps.determine_release.outputs.release_type }}
