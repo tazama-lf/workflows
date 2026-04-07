@@ -20,25 +20,6 @@ jobs:
           ref: main
           fetch-depth: 0 # Fetch all tags
 
-      # Fetch merged pull request and determine release labels
-      - uses: actions-ecosystem/action-get-merged-pull-request@59afe90821bb0b555082ce8ff1e36b03f91553d9  # v1
-        id: get-merged-pull-request
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions-ecosystem/action-release-label@1c7ef83d383a57bf253a2e2e9dfe1b55f445ae15  # v1
-        id: release-label
-        if: ${{ steps.get-merged-pull-request.outputs.title != null }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Get the latest tag in the repository
-      - uses: actions-ecosystem/action-get-latest-tag@b7c32daec3395a9616f88548363a42652b22d435  # v1
-        id: get-latest-tag
-        if: ${{ steps.release-label.outputs.level != null }}
-        with:
-          semver_only: true
-        
       # Determine the release type (major, minor, patch) based on commit messages  
       - name: Determine Release Type
         id: determine_release
