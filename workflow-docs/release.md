@@ -32,21 +32,15 @@ Automates the GitHub release creation process. Triggered by a `repository_dispat
 **Steps:**
 
 1. `actions/checkout@v2` — checks out `main` with full tag history
-2. `actions-ecosystem/action-get-merged-pull-request@v1` — retrieves the last merged PR
-3. `actions-ecosystem/action-release-label@v1` — determines release level from PR labels
-4. `actions-ecosystem/action-get-latest-tag@v1` — gets the latest semver tag
-5. `Determine Release Type` — parses commit messages; maps `BREAKING CHANGE`/`feat!` → major, `feat:` → minor, all others → patch
-6. `Bump Version` — increments the appropriate version component
-7. `Get Milestone Details` — fetches milestone title and description via GitHub API
-8. `Generate Changelog` — compiles changelog from merged PRs since last tag
-9. `Display Changelog` — prints to runner log
-10. `Attach Changelog to Release` — writes changelog content
-11. `Create Release` — creates the GitHub release with the new tag
-12. `Update CHANGELOG.md File` — prepends the new changelog entry
-13. `Update VERSION File` — writes new version string
-
----
-
+2. `Determine Release Type` — parses commit messages; maps `BREAKING CHANGE`/`feat!` → major, `feat:` → minor, all others → patch; uses `git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0"` so repos with no tags default to `v0.0.0` rather than failing
+3. `Bump Version` — increments the appropriate version component; same `git describe` fallback applied here
+4. `Get Milestone Details` — validates `MILESTONE_NUMBER` from `client_payload` is non-empty (exits 1 with an error message if unset) then fetches milestone title and description via GitHub API
+5. `Generate Changelog` — compiles changelog from merged PRs since last tag
+6. `Display Changelog` — prints to runner log
+7. `Attach Changelog to Release` — writes changelog content
+8. `Create Release` — creates the GitHub release with the new tag
+9. `Update CHANGELOG.md File` — prepends the new changelog entry
+10. `Update VERSION File` — writes new version string
 ## Required Secrets
 
 None (uses auto-provided `GITHUB_TOKEN`).
@@ -66,9 +60,6 @@ None (uses auto-provided `GITHUB_TOKEN`).
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
 | `actions/checkout` | tag ref `v2` | — |
-| `actions-ecosystem/action-get-merged-pull-request` | tag ref `v1` | — |
-| `actions-ecosystem/action-release-label` | tag ref `v1` | — |
-| `actions-ecosystem/action-get-latest-tag` | tag ref `v1` | — |
 
 ---
 
@@ -78,6 +69,8 @@ None (uses auto-provided `GITHUB_TOKEN`).
 - Uses `actions/checkout@v2`; should be upgraded to `v4`.
 - No actions are pinned to commit SHAs — all use mutable tag refs, which is a supply-chain risk.
 - `dependabot[bot]` actors are excluded.
+- `git describe` calls use `2>/dev/null || echo "v0.0.0"` fallback so the workflow does not fail on repos that have no tags yet.
+- `MILESTONE_NUMBER` is validated non-empty before the GitHub API call; a missing or empty value exits 1 with a clear error rather than silently passing a malformed URL to `curl`.
 
 ---
 
