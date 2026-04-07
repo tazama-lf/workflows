@@ -69,7 +69,7 @@ None (uses auto-provided `GITHUB_TOKEN`).
 - Uses `actions/checkout@v2`; should be upgraded to `v4`.
 - No actions are pinned to commit SHAs — all use mutable tag refs, which is a supply-chain risk.
 - `dependabot[bot]` actors are excluded.
-- `git describe` calls use `2>/dev/null || echo "v0.0.0"` fallback so the workflow does not fail on repos that have no tags yet.
+- `git describe` calls use `2>/dev/null || echo ""` (empty string) fallback. When no tag exists, `GIT_LOG_RANGE` resolves to `HEAD` (all commits) rather than the invalid ref `v0.0.0..HEAD`, which would cause `git log` to exit non-zero on a first release. The `Bump Version` step still uses a `v0.0.0` arithmetic base so the first release correctly becomes `v0.0.1`/`v0.1.0`/`v1.0.0`.
 - `MILESTONE_NUMBER` is validated non-empty before the GitHub API call; a missing or empty value exits 1 with a clear error rather than silently passing a malformed URL to `curl`.
 
 ---
