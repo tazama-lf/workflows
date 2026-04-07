@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Propagates canonical workflow files from this repository to all configured target repos. When a PR to `dev` is opened or updated, it clones each target repo, copies the applicable workflow files according to per-file sync rules, and opens a `sync-workflows-update` PR in each target repo. `sync-workflows.yml` and `node.js.yml` are explicitly excluded from the bundle.
+Propagates canonical workflow files from this repository to all configured target repos. When commits land on `dev` (i.e. a PR is merged or a direct push is made), it clones each target repo, copies the applicable workflow files according to per-file sync rules, and opens a `sync-workflows-update` PR in each target repo. `sync-workflows.yml` and `node.js.yml` are explicitly excluded from the bundle.
 
 ---
 
@@ -10,7 +10,7 @@ Propagates canonical workflow files from this repository to all configured targe
 
 | Event | Conditions |
 |-------|-----------|
-| `pull_request` | branches: `[dev]` (fires on open, update, and close) |
+| `push` | branches: `[dev]` (fires only when commits land on `dev`) |
 | `workflow_dispatch` | manual |
 
 ---
@@ -21,7 +21,7 @@ Propagates canonical workflow files from this repository to all configured targe
 |----------|-------|
 | Runner | `ubuntu-latest` |
 | Typical duration | ~10–30 min (scales with number of target repos) |
-| Concurrency | none |
+| Concurrency | `group: sync-workflows-${{ github.ref }}`, cancel-in-progress |
 | Permissions | default (plus `GH_TOKEN` for cross-repo operations) |
 
 ---
@@ -48,9 +48,8 @@ Propagates canonical workflow files from this repository to all configured targe
 
 1. `actions/checkout@v4` — checks out this workflows repo
 2. `Set up Git` — configures git identity for commits
-3. `Install GitHub CLI` — downloads and installs `gh` CLI v2.14.7
-4. `Get PR author details` — captures author name and email for commit attribution
-5. `Sync Workflows to Other Repos` — main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, commits changes, pushes, opens PR. **`sync-workflows-update` is a reserved branch name** — do not use it for regular development contributions.
+3. `Get actor details` — captures the triggering actor's name and email for commit attribution; uses the PR author for `pull_request` events and `github.actor` for `push`/`workflow_dispatch` events
+4. `Sync Workflows to Other Repos` — main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, commits changes, pushes, opens PR. **`sync-workflows-update` is a reserved branch name** — do not use it for regular development contributions.
 
 ---
 
@@ -81,8 +80,7 @@ Propagates canonical workflow files from this repository to all configured targe
 
 ## Known Limitations / Notes
 
-- `gh` CLI is pinned to v2.14.7 via a direct tarball download; should be updated periodically.
-- The workflow fires on all `pull_request` events to `dev`, not just merged ones. This means unmerged PRs trigger sync branches in target repos; reviewers in those repos should not merge `sync-workflows-update` PRs until the source PR is merged.
+- The workflow fires on `push` to `dev`, so it only runs when commits actually land on the branch (typically after a PR merge). `sync-workflows-update` PRs in target repos should be safe to review and merge as soon as they appear.
 - **`sync-workflows-update` is a reserved branch name.** The workflow deletes and recreates it on every run. Do not use this name for regular development contributions; any pushed commits will be discarded on the next sync run.
 - Target repos must have a `dev` branch. If absent, the workflow creates one from the repo’s default branch automatically.
 - `dependabot[bot]` actors are excluded.

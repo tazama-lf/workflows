@@ -1,15 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# This GitHub Actions workflow syncs workflows from a central repository to other repositories when a pull request is merged.
+# This GitHub Actions workflow syncs workflows from a central repository to other repositories when changes are pushed to dev.
 
 # Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
 
 name: Sync Workflows
 
 on:
-  pull_request:
-    branches: [ "dev" ] # The branches below must be a subset of the branches above
+  push:
+    branches: [ "dev" ]  # Fires only when commits land on dev (i.e. a PR merges or a direct push). Fixes #36.
   workflow_dispatch:
+
+concurrency:
+  group: sync-workflows-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   Sync_All_Repos_Common_Workflows:
@@ -27,14 +31,21 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           git config --global credential.helper store
 
-      - name: Get PR author details  # Step to get the details of the pull request author
+      - name: Get actor details  # Step to get the triggering actor's details for the Signed-off-by line
         id: pr_author
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_AUTHOR_NAME=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.user.login')
-          PR_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-          PR_AUTHOR_NAME_FULL=$(git log -1 --pretty=format:'%an')
+          # For pull_request events use the PR author login; for push/workflow_dispatch fall back to the triggering actor.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_AUTHOR_NAME=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.user.login')
+            PR_AUTHOR_NAME_FULL=$(git log -1 --pretty=format:'%an')
+            PR_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          else
+            PR_AUTHOR_NAME="${{ github.actor }}"
+            PR_AUTHOR_NAME_FULL="${{ github.actor }}"
+            PR_AUTHOR_EMAIL="${{ github.actor }}@users.noreply.github.com"
+          fi
           echo "PR_AUTHOR_NAME=${PR_AUTHOR_NAME}" >> $GITHUB_ENV
           echo "PR_AUTHOR_EMAIL=${PR_AUTHOR_EMAIL}" >> $GITHUB_ENV
           echo "PR_AUTHOR_NAME_FULL=${PR_AUTHOR_NAME_FULL}" >> $GITHUB_ENV
