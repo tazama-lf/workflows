@@ -48,8 +48,8 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 3. `Read rule version from package.json` — reads `version`; fails if version is NOT a prerelease (`-` suffix required — guards against RC build running on a stable version)
 4. `Clone Rule Executer repository (dev branch)` — clones `tazama-lf/rule-executer@dev`
 5. `Prepare rule-executer-<N>` — copies cloned directory
-6. `Modify package.json and Dockerfile for rule <N>` — patches rule dependency, `ENV RULE_NAME`, `ENV APM_SERVICE_NAME`; validates each substitution succeeded
-7. `Install dependencies` — `npm ci` in the patched directory
+6. `Modify package.json and Dockerfile for rule <N>` — uses a `case` statement on `rule_org` (`frmscoe` → `@frmscoe` scope + `npm:@frmscoe/rule-*`; `tazama-lf` → `@tazama-lf` scope + `npm:@tazama-lf/rule-*`; any other value → `exit 1`) to patch the rule dependency, `ENV RULE_NAME`, `ENV APM_SERVICE_NAME`; validates each substitution succeeded
+7. `Install dependencies` — `npm install` in the patched directory (uses `npm install` rather than `npm ci` because the preceding `sed` step modifies `package.json`, invalidating the lockfile)
 8. `Build and push RC Docker image` — builds once; tags with `VERSION` and `:rc`; pushes both
 9. `Send Slack notification` — posts to `SLACK_WEBHOOK_URL`
 
@@ -59,7 +59,7 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 
 | Secret | Scope | Purpose |
 |--------|-------|---------|
-| `GH_TOKEN_LIB` | org | `npm ci` for private packages; checkout token |
+| `GH_TOKEN_LIB` | org | `npm install` for private packages; checkout token |
 | `DOCKER_USERNAME` | org | Docker Hub login |
 | `DOCKER_PASSWORD` | org | Docker Hub password |
 | `SLACK_WEBHOOK_URL` | org | Slack notification |
