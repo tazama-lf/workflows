@@ -11,6 +11,10 @@ on:
     branches: [ "dev" ]  # Fires only when commits land on dev (i.e. a PR merges or a direct push). Fixes #36.
   workflow_dispatch:
 
+concurrency:
+  group: sync-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   Sync_All_Repos_Common_Workflows:
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
@@ -35,11 +39,13 @@ jobs:
           # For pull_request events use the PR author login; for push/workflow_dispatch fall back to the triggering actor.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             PR_AUTHOR_NAME=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.user.login')
+            PR_AUTHOR_NAME_FULL=$(git log -1 --pretty=format:'%an')
+            PR_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
           else
             PR_AUTHOR_NAME="${{ github.actor }}"
+            PR_AUTHOR_NAME_FULL="${{ github.actor }}"
+            PR_AUTHOR_EMAIL="${{ github.actor }}@users.noreply.github.com"
           fi
-          PR_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
-          PR_AUTHOR_NAME_FULL=$(git log -1 --pretty=format:'%an')
           echo "PR_AUTHOR_NAME=${PR_AUTHOR_NAME}" >> $GITHUB_ENV
           echo "PR_AUTHOR_EMAIL=${PR_AUTHOR_EMAIL}" >> $GITHUB_ENV
           echo "PR_AUTHOR_NAME_FULL=${PR_AUTHOR_NAME_FULL}" >> $GITHUB_ENV
