@@ -31,7 +31,8 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           git config --global credential.helper store
           # Configure SSH commit signing so sync commits show as Verified on GitHub.
-          # SSH_SIGNING_KEY must be stored as an org/repo secret (private key, no passphrase).
+          # SSH_SIGNING_KEY must be stored base64-encoded (single line, no wrapping) to avoid
+          # line-ending corruption. Set with: base64 -w 0 signing_key | gh secret set SSH_SIGNING_KEY
           # The corresponding public key must be registered as a Signing Key on the GitHub account
           # that GH_TOKEN belongs to: Settings → SSH and GPG keys → New signing key.
           if [ -z "${{ secrets.SSH_SIGNING_KEY }}" ]; then
@@ -39,9 +40,8 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.ssh
-          # Strip Windows-style \r\n line endings that may be introduced when the secret
-          # is set from a Windows machine, which would cause ssh-keygen to reject the key.
-          printf '%s' "${{ secrets.SSH_SIGNING_KEY }}" | tr -d '\r' > ~/.ssh/signing_key
+          # Decode the base64 secret directly to the key file — no line-ending issues possible.
+          echo "${{ secrets.SSH_SIGNING_KEY }}" | base64 -d > ~/.ssh/signing_key
           chmod 600 ~/.ssh/signing_key
           # Validate the key is a usable Ed25519/RSA private key before enabling signing.
           ssh-keygen -y -f ~/.ssh/signing_key > /dev/null || {
