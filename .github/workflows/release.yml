@@ -18,25 +18,25 @@ jobs:
     steps:
       # Checkout the main branch with all history
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4 (upgraded from v2)
         with:
           ref: main
           fetch-depth: 0 # Fetch all tags
 
       # Fetch merged pull request and determine release labels
-      - uses: actions-ecosystem/action-get-merged-pull-request@v1
+      - uses: actions-ecosystem/action-get-merged-pull-request@59afe90821bb0b555082ce8ff1e36b03f91553d9  # v1
         id: get-merged-pull-request
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions-ecosystem/action-release-label@v1
+      - uses: actions-ecosystem/action-release-label@1c7ef83d383a57bf253a2e2e9dfe1b55f445ae15  # v1
         id: release-label
         if: ${{ steps.get-merged-pull-request.outputs.title != null }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # Get the latest tag in the repository
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - uses: actions-ecosystem/action-get-latest-tag@b7c32daec3395a9616f88548363a42652b22d435  # v1
         id: get-latest-tag
         if: ${{ steps.release-label.outputs.level != null }}
         with:
@@ -221,23 +221,19 @@ jobs:
       
       # Attach changelog as an artifact
       - name: Attach Changelog to Release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: Changelog
           path: /home/runner/work/changelog.txt
       
       # Create release while including the changelog
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.bump_version.outputs.new_version }}
-          release_name: ${{ steps.bump_version.outputs.new_version }}
-          body_path: /home/runner/work/changelog.txt
-          draft: false
-          prerelease: false
+        run: |
+          gh release create "${{ steps.bump_version.outputs.new_version }}" \
+            --title "${{ steps.bump_version.outputs.new_version }}" \
+            --notes-file /home/runner/work/changelog.txt
 
       - name: Send Slack Notification
         continue-on-error: true
