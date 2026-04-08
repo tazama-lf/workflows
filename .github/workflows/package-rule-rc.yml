@@ -158,6 +158,11 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
+          if [[ "$GITHUB_REF" != "refs/heads/dev" ]]; then
+            echo "::error::RC images must be published from dev. Refusing to push from $GITHUB_REF."
+            exit 1
+          fi
+
           VERSION="${{ steps.rule_version.outputs.VERSION }}"
           RULE_NUM="${{ inputs.rule_number }}"
           IMAGE="tazamaorg/rule-${RULE_NUM}"
