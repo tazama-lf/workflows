@@ -38,7 +38,7 @@ jobs:
       if: hashFiles('Dockerfile') != ''
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
-      run: docker build --secret id=GH_TOKEN,env=GH_TOKEN . --file Dockerfile --tag localbuild/testimage:latest
+      run: docker build --secret id=GH_TOKEN,env=GH_TOKEN --file Dockerfile --tag localbuild/testimage:latest .
     - name: Scan the image and upload dependency results
       if: hashFiles('Dockerfile') != ''
       uses: anchore/sbom-action@bb716408e75840bbb01e839347cd213767269d4a
