@@ -28,29 +28,29 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 ## Jobs
 
-### `push_backend_rc` — Push backend RC Docker image to Docker Hub
+### `push_backend_rc` - Push backend RC Docker image to Docker Hub
 
 **Steps:**
 
-1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — checks out source
-2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` — authenticates to Docker Hub
-3. `Set ENV variables` — derives `REPO_NAME` from `GITHUB_REPOSITORY`
-4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` — generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-backend`
-5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` — builds from `./backend` context and `./backend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
-6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` — generates local build attestation (`push-to-registry: false` — RC builds are not published to the Sigstore transparency log)
-7. `Send Slack Notification` — posts to `SLACK_WEBHOOK_URL`
+1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` - checks out source
+2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
+3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
+4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-backend`
+5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./backend` context and `./backend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
+6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` - generates local build attestation (`push-to-registry: false` - RC builds are not published to the Sigstore transparency log)
+7. `Send Slack Notification` - posts to `SLACK_WEBHOOK_URL`
 
-### `push_frontend_rc` — Push frontend RC Docker image to Docker Hub
+### `push_frontend_rc` - Push frontend RC Docker image to Docker Hub
 
 **Steps:**
 
-1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — checks out source
-2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` — authenticates to Docker Hub
-3. `Set ENV variables` — derives `REPO_NAME` from `GITHUB_REPOSITORY`
-4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` — generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-frontend`
-5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` — builds from `./frontend` context and `./frontend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
-6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` — generates local build attestation (`push-to-registry: false` — RC builds are not published to the Sigstore transparency log)
-7. `Send Slack Notification` — posts to `SLACK_WEBHOOK_URL`
+1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` - checks out source
+2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
+3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
+4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-frontend`
+5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./frontend` context and `./frontend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
+6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` - generates local build attestation (`push-to-registry: false` - RC builds are not published to the Sigstore transparency log)
+7. `Send Slack Notification` - posts to `SLACK_WEBHOOK_URL`
 
 ---
 
@@ -69,8 +69,8 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 | Group | Behaviour |
 |-------|-----------|
-| `REPOS` (service repos) | Listed in `REPOS` but also in `SPECIFIC_REPOS` — **dual-container repos are in both lists** |
-| `SPECIFIC_REPOS` | **Excluded via `SPECIFIC_FILES`** — `dockerhub-image-build-dual-rc.yml` is listed in `SPECIFIC_FILES` and therefore not copied to repos in `SPECIFIC_REPOS` |
+| `REPOS` (service repos) | Listed in `REPOS` but also in `SPECIFIC_REPOS` - **dual-container repos are in both lists** |
+| `SPECIFIC_REPOS` | **Excluded via `SPECIFIC_FILES`** - `dockerhub-image-build-dual-rc.yml` is listed in `SPECIFIC_FILES` and therefore not copied to repos in `SPECIFIC_REPOS` |
 
 > This workflow is **not distributed via sync**. It must be committed directly to each dual-container repo. See [Repository Overrides](#repository-overrides) below.
 

@@ -27,12 +27,12 @@ Scans dependency manifest file changes in pull requests and blocks merging if ne
 
 ## Jobs
 
-### `dependency-review` — Dependency Review
+### `dependency-review` - Dependency Review
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `actions/dependency-review-action@v4` — reviews dependency manifests; fails PR if vulnerable versions are introduced
+1. `actions/checkout@v4` - checks out source
+2. `actions/dependency-review-action@v4` - reviews dependency manifests; fails PR if vulnerable versions are introduced
 
 ---
 
@@ -54,8 +54,8 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `actions/dependency-review-action` | tag ref `v4` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `actions/dependency-review-action` | tag ref `v4` | - |
 
 ---
 

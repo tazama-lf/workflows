@@ -29,16 +29,16 @@ Runs GitHub CodeQL semantic analysis on JavaScript/TypeScript source code, scann
 
 ## Jobs
 
-### `analyze` — Analyze
+### `analyze` - Analyze
 
 **Matrix:** `language: [javascript]`
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `github/codeql-action/init@v3` — initialises CodeQL toolchain for JavaScript
-3. `github/codeql-action/autobuild@v3` — automatically builds the project
-4. `github/codeql-action/analyze@v3` — performs analysis and uploads results
+1. `actions/checkout@v4` - checks out source
+2. `github/codeql-action/init@v3` - initialises CodeQL toolchain for JavaScript
+3. `github/codeql-action/autobuild@v3` - automatically builds the project
+4. `github/codeql-action/analyze@v3` - performs analysis and uploads results
 
 ---
 
@@ -60,16 +60,16 @@ None (uses default `GITHUB_TOKEN`).
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `github/codeql-action/init` | tag ref `v3` | — |
-| `github/codeql-action/autobuild` | tag ref `v3` | — |
-| `github/codeql-action/analyze` | tag ref `v3` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `github/codeql-action/init` | tag ref `v3` | - |
+| `github/codeql-action/autobuild` | tag ref `v3` | - |
+| `github/codeql-action/analyze` | tag ref `v3` | - |
 
 ---
 
 ## Known Limitations / Notes
 
-- Language matrix is fixed to `javascript`; CodeQL treats JS and TS together under the `javascript` language key — no change needed for TypeScript repos.
+- Language matrix is fixed to `javascript`; CodeQL treats JS and TS together under the `javascript` language key - no change needed for TypeScript repos.
 - `dependabot[bot]` actors are excluded.
 
 ---

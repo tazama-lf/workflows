@@ -29,13 +29,13 @@ Performs a Codacy security scan of the codebase and uploads results in SARIF for
 
 ## Jobs
 
-### `codacy-security-scan` — Codacy Security Scan
+### `codacy-security-scan` - Codacy Security Scan
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08` — runs Codacy CLI; outputs `results.sarif`; `max-allowed-issues: 2147483647` defers PR rejection to GitHub
-3. `github/codeql-action/upload-sarif@v3` — uploads `results.sarif` to GitHub code scanning
+1. `actions/checkout@v4` - checks out source
+2. `codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08` - runs Codacy CLI; outputs `results.sarif`; `max-allowed-issues: 2147483647` defers PR rejection to GitHub
+3. `github/codeql-action/upload-sarif@v3` - uploads `results.sarif` to GitHub code scanning
 
 ---
 
@@ -60,7 +60,7 @@ Performs a Codacy security scan of the codebase and uploads results in SARIF for
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
 | `codacy/codacy-analysis-cli-action` | `562ee3e92b8e92df8b67e0a5ff8aa8e261919c08` | v4.4.7 |
-| `github/codeql-action/upload-sarif` | tag ref `v3` | — |
+| `github/codeql-action/upload-sarif` | tag ref `v3` | - |
 
 ---
 

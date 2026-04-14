@@ -27,11 +27,11 @@ Enforces the feature-branch → dev → main development workflow by failing any
 
 ## Jobs
 
-### `check-source-branch` — verify PR source branch
+### `check-source-branch` - verify PR source branch
 
 **Steps:**
 
-1. `Verify PR source branch is dev or release/v<N>.*` — shell check; exits `1` with actionable message (including `gh pr edit --base dev` hint) if source branch is not `dev` or `release/v[0-9]*`
+1. `Verify PR source branch is dev or release/v<N>.*` - shell check; exits `1` with actionable message (including `gh pr edit --base dev` hint) if source branch is not `dev` or `release/v[0-9]*`
 
 ---
 
@@ -51,7 +51,7 @@ None.
 
 ## Dependencies (pinned actions)
 
-None — single run step only.
+None - single run step only.
 
 ---
 

@@ -30,14 +30,14 @@ Runs the OSSF Scorecard supply-chain security analysis to assess repository secu
 
 ## Jobs
 
-### `analysis` — Scorecard analysis
+### `analysis` - Scorecard analysis
 
 **Steps:**
 
-1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` — checks out source (`persist-credentials: false`)
-2. `ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a` — runs analysis; outputs `results.sarif`; `publish_results=true` only on `main`, `schedule`, or `branch_protection_rule` events
-3. `actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f` — uploads `results.sarif` artifact (5-day retention)
-4. `github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc` — uploads SARIF to code scanning dashboard
+1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` - checks out source (`persist-credentials: false`)
+2. `ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a` - runs analysis; outputs `results.sarif`; `publish_results=true` only on `main`, `schedule`, or `branch_protection_rule` events
+3. `actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f` - uploads `results.sarif` artifact (5-day retention)
+4. `github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc` - uploads SARIF to code scanning dashboard
 
 ---
 
@@ -52,7 +52,7 @@ None (uses GitHub OIDC token via `id-token: write`).
 | Group | Behaviour |
 |-------|-----------|
 | Service repos (`REPOS` minus `PUBLISH_REPOS`) | Receives this file |
-| `PUBLISH_REPOS` | **Excluded** — scorecard is scoped to service repos only |
+| `PUBLISH_REPOS` | **Excluded** - scorecard is scoped to service repos only |
 
 ---
 

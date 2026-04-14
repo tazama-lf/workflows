@@ -31,16 +31,16 @@ Automates the GitHub release creation process. Triggered by a `repository_dispat
 
 **Steps:**
 
-1. `actions/checkout@v2` — checks out `main` with full tag history
-2. `Determine Release Type` — parses commit messages; maps `BREAKING CHANGE`/`feat!` → major, `feat:` → minor, all others → patch; uses `git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0"` so repos with no tags default to `v0.0.0` rather than failing
-3. `Bump Version` — increments the appropriate version component; same `git describe` fallback applied here
-4. `Get Milestone Details` — validates `MILESTONE_NUMBER` from `client_payload` is non-empty (exits 1 with an error message if unset) then fetches milestone title and description via GitHub API
-5. `Generate Changelog` — compiles changelog from merged PRs since last tag
-6. `Display Changelog` — prints to runner log
-7. `Attach Changelog to Release` — writes changelog content
-8. `Create Release` — creates the GitHub release with the new tag
-9. `Update CHANGELOG.md File` — prepends the new changelog entry
-10. `Update VERSION File` — writes new version string
+1. `actions/checkout@v2` - checks out `main` with full tag history
+2. `Determine Release Type` - parses commit messages; maps `BREAKING CHANGE`/`feat!` → major, `feat:` → minor, all others → patch; uses `git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0"` so repos with no tags default to `v0.0.0` rather than failing
+3. `Bump Version` - increments the appropriate version component; same `git describe` fallback applied here
+4. `Get Milestone Details` - validates `MILESTONE_NUMBER` from `client_payload` is non-empty (exits 1 with an error message if unset) then fetches milestone title and description via GitHub API
+5. `Generate Changelog` - compiles changelog from merged PRs since last tag
+6. `Display Changelog` - prints to runner log
+7. `Attach Changelog to Release` - writes changelog content
+8. `Create Release` - creates the GitHub release with the new tag
+9. `Update CHANGELOG.md File` - prepends the new changelog entry
+10. `Update VERSION File` - writes new version string
 ## Required Secrets
 
 None (uses auto-provided `GITHUB_TOKEN`).
@@ -59,7 +59,7 @@ None (uses auto-provided `GITHUB_TOKEN`).
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v2` | — |
+| `actions/checkout` | tag ref `v2` | - |
 
 ---
 
@@ -67,7 +67,7 @@ None (uses auto-provided `GITHUB_TOKEN`).
 
 - Uses deprecated `::set-output name=...` syntax; should be migrated to `$GITHUB_OUTPUT`.
 - Uses `actions/checkout@v2`; should be upgraded to `v4`.
-- No actions are pinned to commit SHAs — all use mutable tag refs, which is a supply-chain risk.
+- No actions are pinned to commit SHAs - all use mutable tag refs, which is a supply-chain risk.
 - `dependabot[bot]` actors are excluded.
 - `git describe` calls use `2>/dev/null || echo ""` (empty string) fallback. When no tag exists, `GIT_LOG_RANGE` resolves to `HEAD` (all commits) rather than the invalid ref `v0.0.0..HEAD`, which would cause `git log` to exit non-zero on a first release. The `Bump Version` step still uses a `v0.0.0` arithmetic base so the first release correctly becomes `v0.0.1`/`v0.1.0`/`v1.0.0`.
 - `MILESTONE_NUMBER` is validated non-empty before the GitHub API call; a missing or empty value exits 1 with a clear error rather than silently passing a malformed URL to `curl`.

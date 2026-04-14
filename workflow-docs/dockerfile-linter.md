@@ -29,13 +29,13 @@ Lints `Dockerfile` using Hadolint, a Haskell-based Dockerfile linter that enforc
 
 ## Jobs
 
-### `hadolint` — Run hadolint scanning
+### `hadolint` - Run hadolint scanning
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `hadolint/hadolint-action@f988afea3da57ee48710a9795b6bb677cc901183` — lints `./Dockerfile`; outputs `hadolint-results.sarif`; `no-fail: true` allows SARIF generation even on findings
-3. `github/codeql-action/upload-sarif@v3` — uploads SARIF to GitHub code scanning
+1. `actions/checkout@v4` - checks out source
+2. `hadolint/hadolint-action@f988afea3da57ee48710a9795b6bb677cc901183` - lints `./Dockerfile`; outputs `hadolint-results.sarif`; `no-fail: true` allows SARIF generation even on findings
+3. `github/codeql-action/upload-sarif@v3` - uploads SARIF to GitHub code scanning
 
 ---
 
@@ -49,7 +49,7 @@ None.
 
 | Group | Behaviour |
 |-------|----------|
-| All `REPOS` | Receives this file — a no-op if the repo has no `Dockerfile` |
+| All `REPOS` | Receives this file - a no-op if the repo has no `Dockerfile` |
 
 ---
 
@@ -57,9 +57,9 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `hadolint/hadolint-action` | `f988afea3da57ee48710a9795b6bb677cc901183` | — |
-| `github/codeql-action/upload-sarif` | tag ref `v3` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `hadolint/hadolint-action` | `f988afea3da57ee48710a9795b6bb677cc901183` | - |
+| `github/codeql-action/upload-sarif` | tag ref `v3` | - |
 
 ---
 

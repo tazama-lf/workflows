@@ -27,13 +27,13 @@ Checks that every commit in a pull request includes a `Signed-off-by:` line, enf
 
 ## Jobs
 
-### `dco` — DCO
+### `dco` - DCO
 
 **Steps:**
 
-1. `actions/checkout@v4` — full history fetch (`fetch-depth: 0`)
-2. `Set up environment variables` — captures `BASE_BRANCH` and `HEAD_BRANCH` from PR context
-3. `Check for DCO Sign-off` — iterates commits between head and base; fails listing non-compliant SHAs
+1. `actions/checkout@v4` - full history fetch (`fetch-depth: 0`)
+2. `Set up environment variables` - captures `BASE_BRANCH` and `HEAD_BRANCH` from PR context
+3. `Check for DCO Sign-off` - iterates commits between head and base; fails listing non-compliant SHAs
 
 ---
 
@@ -55,14 +55,14 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
+| `actions/checkout` | tag ref `v4` | - |
 
 ---
 
 ## Known Limitations / Notes
 
 - `dependabot[bot]` actors are excluded.
-- The `git log` range uses `origin/HEAD_BRANCH..origin/BASE_BRANCH`, which gives commits present in the base but absent from the head — the reverse of what a DCO check requires. The correct range is `origin/BASE_BRANCH..origin/HEAD_BRANCH`. This is a latent bug; the check may pass silently on PRs that contain unsigned commits.
+- The `git log` range uses `origin/HEAD_BRANCH..origin/BASE_BRANCH`, which gives commits present in the base but absent from the head - the reverse of what a DCO check requires. The correct range is `origin/BASE_BRANCH..origin/HEAD_BRANCH`. This is a latent bug; the check may pass silently on PRs that contain unsigned commits.
 
 ---
 

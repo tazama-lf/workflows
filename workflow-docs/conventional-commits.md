@@ -27,12 +27,12 @@ Validates the PR title against the Conventional Commits specification and automa
 
 ## Jobs
 
-### `validate-pr-title` — PR Conventional Commit Validation
+### `validate-pr-title` - PR Conventional Commit Validation
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `ytanikin/PRConventionalCommits@1.1.0` — validates title; accepted types: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `feat!`; applies label on match
+1. `actions/checkout@v4` - checks out source
+2. `ytanikin/PRConventionalCommits@1.1.0` - validates title; accepted types: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `feat!`; applies label on match
 
 ---
 
@@ -54,8 +54,8 @@ None (uses auto-provided `GITHUB_TOKEN`).
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `ytanikin/PRConventionalCommits` | tag ref `1.1.0` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `ytanikin/PRConventionalCommits` | tag ref `1.1.0` | - |
 
 ---
 

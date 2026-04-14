@@ -31,8 +31,8 @@ Blocks a pull request from merging to `main` if `package.json` contains a prerel
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `Reject prerelease version on main PR` — reads `.version` from `package.json` via `jq`; exits `1` with an actionable message (showing both the current version and the corrected stable version) if a `-` suffix is detected
+1. `actions/checkout@v4` - checks out source
+2. `Reject prerelease version on main PR` - reads `.version` from `package.json` via `jq`; exits `1` with an actionable message (showing both the current version and the corrected stable version) if a `-` suffix is detected
 
 ---
 
@@ -47,7 +47,7 @@ None.
 | Group | Behaviour |
 |-------|-----------|
 | `PUBLISH_REPOS` | Receives this file |
-| All service repos (non-`PUBLISH_REPOS`) | **Excluded** — service repos do not publish npm packages and do not use the prerelease guard |
+| All service repos (non-`PUBLISH_REPOS`) | **Excluded** - service repos do not publish npm packages and do not use the prerelease guard |
 
 ---
 
@@ -55,7 +55,7 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|--------------|
-| `actions/checkout` | tag ref `v4` | — |
+| `actions/checkout` | tag ref `v4` | - |
 
 ---
 
