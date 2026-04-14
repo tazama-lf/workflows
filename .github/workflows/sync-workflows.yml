@@ -105,7 +105,7 @@ jobs:
             case-management-system
             connection-studio
             rule-studio
-          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml dockerhub-image-build-dual.yml dockerhub-image-build-dual-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
           SPECIFIC_REPOS: |  # Repos that do NOT build Docker images — receive all workflows except SPECIFIC_FILES
             relay-service
             batch-ppa
@@ -152,6 +152,8 @@ jobs:
           cp -r .github/workflows/* temp-workflows/
           rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
           rm -f temp-workflows/node.js.yml  # Remove per-repo CI workflow to avoid overwriting repo-specific benchmarks
+          rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
+          rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
 
           # Helper: check membership in a newline-delimited list (YAML block scalar)
           # Space-delimited single-line vars (SPECIFIC_FILES) use the [[ =~ ]] pattern directly.

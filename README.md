@@ -157,13 +157,13 @@ frmscoe rule repos reside in the `frmscoe` organisation and are managed by [`frm
 
 ### 7. Canonical workflow changes (this repo)
 
-Changes to this repo propagate to all 26 target repositories. This is the highest-impact SDLC path.
+Changes to this repo propagate to all 31 target repositories. This is the highest-impact SDLC path.
 
 1. **DevOps** — modifies workflow files in `.github/workflows/`; updates the corresponding `workflow-docs/` entry.
 2. **DevOps** — opens pull request targeting `dev`.
 3. **AUTO** — standard PR check suite fires against this repo.
-4. **AUTO** — `sync-workflows.yml` fires; opens `sync-workflows-update` PRs in all 31 target repos — ⚠️ [known issue #36](https://github.com/tazama-lf/workflows/issues/36): fires on PR open, not only on merge. **Do not merge sync PRs in target repos until the source PR here is confirmed merged.**
-5. **Reviewer — MANUAL** — reviews and merges the source PR to `dev` in this repo.
+4. **Reviewer — MANUAL** — reviews and merges the source PR to `dev` in this repo.
+5. **AUTO** — `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 31 target repos.
 6. **Reviewers in target repos — MANUAL** — merge `sync-workflows-update` PRs in each target repo.
 7. **DevOps — MANUAL** — applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
 8. **AUTO** — once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
@@ -183,7 +183,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `dco-check.yml` | Verify DCO Signed-off-by on commits | `pull_request` | All repos |
 | `dependency-review.yml` | Flag CVEs and licence issues in new deps | `pull_request` | All repos |
 | `dockerfile-linter.yml` | Hadolint lint of Dockerfiles | `pull_request` | All repos (no-op where no `Dockerfile` exists) |
-| `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]` | **Not synced** — committed directly to dual-container repos only |
+| `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]`, `workflow_dispatch` | **Not synced** — committed directly to dual-container repos only |
 | `dockerhub-image-build-dual.yml` | Build and push versioned Docker images for backend and frontend | `push: [main]`, `release: [published]` | **Not synced** — committed directly to dual-container repos only |
 | `dockerhub-image-build-rc.yml` | Build and push `:rc` Docker image | `push: [dev]` | Service repos only (not SPECIFIC_REPOS) |
 | `dockerhub-image-build.yml` | Build and push versioned Docker image | `push: [main]` | Service repos only (not SPECIFIC_REPOS) |
@@ -198,7 +198,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
 | `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
 | `scorecard.yml` | OSSF Scorecard supply-chain security | `push: [main,dev]`, schedule (weekly), `branch_protection_rule` | Service repos only (not `PUBLISH_REPOS`) |
-| `sync-workflows.yml` | Distribute canonical workflows to all target repos | `pull_request: [dev]`, `workflow_dispatch` | **Not synced** — canonical-only |
+| `sync-workflows.yml` | Distribute canonical workflows to all target repos | `push: [dev]`, `workflow_dispatch` | **Not synced** — canonical-only |
 | `version-check.yml` | Block PR to `main` if `package.json` version has a prerelease suffix | `pull_request: [main]` | `PUBLISH_REPOS` only |
 
 ---
@@ -221,7 +221,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
 | `node.js.yml` | Each repo maintains its own copy to allow per-repo customisation |
 
-**Full `REPOS` list (26 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`.
+**Full `REPOS` list (31 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
