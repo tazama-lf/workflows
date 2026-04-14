@@ -100,7 +100,12 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
-          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
+            data-enrichment-service
+            event-monitoring-service
+            case-management-system
+            connection-studio
+            rule-studio
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml dockerhub-image-build-dual.yml dockerhub-image-build-dual-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
           SPECIFIC_REPOS: |  # Repos that do NOT build Docker images — receive all workflows except SPECIFIC_FILES
             relay-service
             batch-ppa
@@ -118,6 +123,9 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
+            case-management-system
+            connection-studio
+            rule-studio
           PUBLISH_REPOS: |  # Library repos that publish npm packages — the only repos that receive publish.yml and version-check.yml
             frms-coe-lib
             frms-coe-startup-lib
