@@ -34,7 +34,7 @@ Propagates canonical workflow files from this repository to all configured targe
 | `SPECIFIC_REPOS` | Library and non-Docker repos that skip `SPECIFIC_FILES` |
 | `SPECIFIC_FILES` | `dockerhub-image-build.yml dockerhub-image-build-rc.yml` |
 | `PUBLISH_REPOS` | Library repos that receive `publish.yml`, `version-check.yml`, `release-train.yml` but not `scorecard.yml` |
-| `RULE_REPOS` | `rule-901`, `rule-902` — receive caller stubs for `package-rule*.yml` instead of the full canonical |
+| `RULE_REPOS` | `rule-901`, `rule-902` - receive caller stubs for `package-rule*.yml` instead of the full canonical |
 
 **Org routing:** All repos in `REPOS` are cloned from the `tazama-lf` org.
 
@@ -46,10 +46,10 @@ Propagates canonical workflow files from this repository to all configured targe
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out this workflows repo
-2. `Set up Git` — configures git identity for commits
-3. `Get actor details` — captures the triggering actor's name and email for commit attribution; uses the PR author for `pull_request` events and `github.actor` for `push`/`workflow_dispatch` events
-4. `Sync Workflows to Other Repos` — main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, commits changes, pushes, opens PR. **`sync-workflows-update` is a reserved branch name** — do not use it for regular development contributions.
+1. `actions/checkout@v4` - checks out this workflows repo
+2. `Set up Git` - configures git identity for commits
+3. `Get actor details` - captures the triggering actor's name and email for commit attribution; uses the PR author for `pull_request` events and `github.actor` for `push`/`workflow_dispatch` events
+4. `Sync Workflows to Other Repos` - main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, commits changes, pushes, opens PR. **`sync-workflows-update` is a reserved branch name** - do not use it for regular development contributions.
 
 ---
 
@@ -74,7 +74,7 @@ Propagates canonical workflow files from this repository to all configured targe
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
+| `actions/checkout` | tag ref `v4` | - |
 
 ---
 
@@ -89,4 +89,4 @@ Propagates canonical workflow files from this repository to all configured targe
 
 ## Repository Overrides
 
-Not applicable — this workflow is canonical-only and is never distributed.
+Not applicable - this workflow is canonical-only and is never distributed.

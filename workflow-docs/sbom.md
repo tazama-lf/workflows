@@ -31,9 +31,9 @@ Generates a Software Bill of Materials (SBOM) for the Docker image using Anchore
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `docker build . --file Dockerfile --tag localbuild/testimage:latest` — builds the Docker image locally
-3. `anchore/sbom-action@bb716408e75840bbb01e839347cd213767269d4a` — scans the image; outputs `image.spdx.json` artifact; submits dependency snapshot to GitHub via Dependency Submission API
+1. `actions/checkout@v4` - checks out source
+2. `docker build . --file Dockerfile --tag localbuild/testimage:latest` - builds the Docker image locally
+3. `anchore/sbom-action@bb716408e75840bbb01e839347cd213767269d4a` - scans the image; outputs `image.spdx.json` artifact; submits dependency snapshot to GitHub via Dependency Submission API
 
 ---
 
@@ -55,15 +55,15 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|--------------|
-| `actions/checkout` | tag ref `v4` | — |
-| `anchore/sbom-action` | `bb716408e75840bbb01e839347cd213767269d4a` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `anchore/sbom-action` | `bb716408e75840bbb01e839347cd213767269d4a` | - |
 
 ---
 
 ## Known Limitations / Notes
 
 - `dependabot[bot]` actors are excluded.
-- Synced to all repos including library repos that have no `Dockerfile`; the `docker build` step will fail in those repos. Consider excluding library repos (`PUBLISH_REPOS`) from receiving this file — tracked in tazama-lf/workflows#35.
+- Synced to all repos including library repos that have no `Dockerfile`; the `docker build` step will fail in those repos. Consider excluding library repos (`PUBLISH_REPOS`) from receiving this file - tracked in tazama-lf/workflows#35.
 
 ---
 

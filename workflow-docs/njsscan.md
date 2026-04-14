@@ -29,13 +29,13 @@ Runs the njsscan (nodejsscan) static security scanner against the Node.js codeba
 
 ## Jobs
 
-### `njsscan` — njsscan code scanning
+### `njsscan` - njsscan code scanning
 
 **Steps:**
 
-1. `actions/checkout@v4` — checks out source
-2. `ajinabraham/njsscan-action@d58d8b2f26322cd35a9efb8003baac517f226d81` — scans `.`; outputs `results.sarif`; `|| true` ensures SARIF is always generated even when issues are found
-3. `github/codeql-action/upload-sarif@v3` — uploads `results.sarif`
+1. `actions/checkout@v4` - checks out source
+2. `ajinabraham/njsscan-action@d58d8b2f26322cd35a9efb8003baac517f226d81` - scans `.`; outputs `results.sarif`; `|| true` ensures SARIF is always generated even when issues are found
+3. `github/codeql-action/upload-sarif@v3` - uploads `results.sarif`
 
 ---
 
@@ -57,9 +57,9 @@ None.
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `ajinabraham/njsscan-action` | `d58d8b2f26322cd35a9efb8003baac517f226d81` | — |
-| `github/codeql-action/upload-sarif` | tag ref `v3` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `ajinabraham/njsscan-action` | `d58d8b2f26322cd35a9efb8003baac517f226d81` | - |
+| `github/codeql-action/upload-sarif` | tag ref `v3` | - |
 
 ---
 

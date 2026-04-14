@@ -30,12 +30,12 @@ One or two sentences describing what this workflow does and why it exists.
 
 ## Jobs
 
-### `<job-id>` — <short description>
+### `<job-id>` - <short description>
 
 **Steps:**
 
-1. `actions/checkout@<sha>` — checks out source
-2. `<step name>` — <what it does>
+1. `actions/checkout@<sha>` - checks out source
+2. `<step name>` - <what it does>
 3. ...
 
 **Outputs:** _(if any)_
@@ -60,8 +60,8 @@ One or two sentences describing what this workflow does and why it exists.
 | Group | Behaviour |
 |-------|-----------|
 | `REPOS` | Receives this file |
-| `SPECIFIC_REPOS` | **Excluded** — reason |
-| `PUBLISH_REPOS` | **Excluded** — reason |
+| `SPECIFIC_REPOS` | **Excluded** - reason |
+| `PUBLISH_REPOS` | **Excluded** - reason |
 
 ---
 

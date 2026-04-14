@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Node.js CI pipeline with three parallel jobs — build, lint, and test — running against Node.js 20. Validates that the project compiles, passes linting rules, and all tests pass on every push and pull request to `dev` and `main`.
+Node.js CI pipeline with three parallel jobs - build, lint, and test - running against Node.js 20. Validates that the project compiles, passes linting rules, and all tests pass on every push and pull request to `dev` and `main`.
 
 ---
 
@@ -41,21 +41,21 @@ Node.js CI pipeline with three parallel jobs — build, lint, and test — runni
 
 ## Jobs
 
-### `build` — run build
+### `build` - run build
 
 1. `actions/checkout@v4`
-2. `actions/setup-node@v4` — Node 20, npm cache, registry and scope
+2. `actions/setup-node@v4` - Node 20, npm cache, registry and scope
 3. `npm ci`
 4. `npm run build`
 
-### `lint` — check style
+### `lint` - check style
 
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4`
 3. `npm ci`
 4. `npm run lint`
 
-### `test` — check tests
+### `test` - check tests
 
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4`
@@ -76,7 +76,7 @@ Node.js CI pipeline with three parallel jobs — build, lint, and test — runni
 
 | Group | Behaviour |
 |-------|----------|
-| **All repos** | **Excluded from sync** — `node.js.yml` is explicitly removed before the sync bundle is assembled; every repo maintains its own copy |
+| **All repos** | **Excluded from sync** - `node.js.yml` is explicitly removed before the sync bundle is assembled; every repo maintains its own copy |
 
 ---
 
@@ -84,8 +84,8 @@ Node.js CI pipeline with three parallel jobs — build, lint, and test — runni
 
 | Action | Pinned SHA | Semver alias |
 |--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | — |
-| `actions/setup-node` | tag ref `v4` | — |
+| `actions/checkout` | tag ref `v4` | - |
+| `actions/setup-node` | tag ref `v4` | - |
 
 ---
 
@@ -99,4 +99,4 @@ Node.js CI pipeline with three parallel jobs — build, lint, and test — runni
 
 ## Repository Overrides
 
-Not applicable — this workflow is not synced; every repo maintains its own copy. Some repos previously had a `bench` job included in this file; that job is being removed via separate PRs.
+Not applicable - this workflow is not synced; every repo maintains its own copy. Some repos previously had a `bench` job included in this file; that job is being removed via separate PRs.

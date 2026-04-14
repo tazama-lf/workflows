@@ -40,7 +40,7 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.ssh
-          # Decode the base64 secret directly to the key file — no line-ending issues possible.
+          # Decode the base64 secret directly to the key file - no line-ending issues possible.
           echo "${{ secrets.SSH_SIGNING_KEY }}" | base64 -d > ~/.ssh/signing_key
           chmod 600 ~/.ssh/signing_key
           # Validate the key is a usable Ed25519/RSA private key before enabling signing.
@@ -100,8 +100,13 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
+            data-enrichment-service
+            event-monitoring-service
+            case-management-system
+            connection-studio
+            rule-studio
           SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
-          SPECIFIC_REPOS: |  # Repos that do NOT build Docker images — receive all workflows except SPECIFIC_FILES
+          SPECIFIC_REPOS: |  # Repos that do NOT build Docker images - receive all workflows except SPECIFIC_FILES
             relay-service
             batch-ppa
             Full-Stack-Docker-Tazama
@@ -118,7 +123,10 @@ jobs:
             relay-service-integration-kafka
             relay-service-integration-rabbitmq
             audit-lib
-          PUBLISH_REPOS: |  # Library repos that publish npm packages — the only repos that receive publish.yml and version-check.yml
+            case-management-system
+            connection-studio
+            rule-studio
+          PUBLISH_REPOS: |  # Library repos that publish npm packages - the only repos that receive publish.yml and version-check.yml
             frms-coe-lib
             frms-coe-startup-lib
             auth-lib
@@ -144,6 +152,8 @@ jobs:
           cp -r .github/workflows/* temp-workflows/
           rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
           rm -f temp-workflows/node.js.yml  # Remove per-repo CI workflow to avoid overwriting repo-specific benchmarks
+          rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
+          rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
 
           # Helper: check membership in a newline-delimited list (YAML block scalar)
           # Space-delimited single-line vars (SPECIFIC_FILES) use the [[ =~ ]] pattern directly.
@@ -157,7 +167,7 @@ jobs:
             cd $repo
             git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/$ORG/$repo.git
 
-            # Ensure dev branch exists in target repo — create from default branch if absent.
+            # Ensure dev branch exists in target repo - create from default branch if absent.
             if ! git ls-remote --heads origin dev | grep -q dev; then
               DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
               echo "Branch 'dev' not found in $repo; creating from '${DEFAULT_BRANCH}'"
@@ -168,7 +178,7 @@ jobs:
             fi
 
             # Always delete and recreate sync-workflows-update to avoid accumulating stale changes.
-            # RESERVED: sync-workflows-update is managed by this workflow — do not use it for regular development contributions.
+            # RESERVED: sync-workflows-update is managed by this workflow - do not use it for regular development contributions.
             if git ls-remote --heads origin sync-workflows-update | grep -q sync-workflows-update; then
               git push origin --delete sync-workflows-update || true
             fi
@@ -188,11 +198,11 @@ jobs:
               if [[ "${filename}" == "publish.yml" || "${filename}" == "version-check.yml" || "${filename}" == "release-train.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
                 continue
               fi
-              # package-rule*.yml canonical definitions: never copy to rule repos — stubs are stamped below
+              # package-rule*.yml canonical definitions: never copy to rule repos - stubs are stamped below
               if in_list "$repo" "$RULE_REPOS" && [[ "${filename}" == package-rule*.yml ]]; then
                 continue
               fi
-              # scorecard.yml: only copy to service repos — skip library/npm repos and rule repos
+              # scorecard.yml: only copy to service repos - skip library/npm repos and rule repos
               if [[ "${filename}" == "scorecard.yml" ]] && in_list "$repo" "$PUBLISH_REPOS"; then
                 continue
               fi
@@ -205,7 +215,7 @@ jobs:
               # RC caller stub
               printf '%s\n' \
                 '# SPDX-License-Identifier: Apache-2.0' \
-                '# This file is managed centrally — do not edit manually.' \
+                '# This file is managed centrally - do not edit manually.' \
                 '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
                 'on:' \
                 '  push:' \
@@ -224,7 +234,7 @@ jobs:
               # Stable caller stub
               printf '%s\n' \
                 '# SPDX-License-Identifier: Apache-2.0' \
-                '# This file is managed centrally — do not edit manually.' \
+                '# This file is managed centrally - do not edit manually.' \
                 '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
                 'on:' \
                 '  push:' \

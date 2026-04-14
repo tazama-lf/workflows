@@ -16,12 +16,13 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 
 | Class | Repos | Output | Notes |
 |-------|-------|--------|-------|
-| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
-| **Other service repos** | `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` | — | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
+| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `data-enrichment-service`, `event-monitoring-service` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
+| **Dual-container service repos** | `case-management-system`, `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
+| **Other service repos** | `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
-| **Rule repos — tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
-| **Rule repos — frmscoe** | `rule-001` through `rule-091` (33 active repos) | Docker image | Managed via [`frmscoe/workflows`](https://github.com/frmscoe/workflows); receive Docker builds via `package-rule*.yml` caller stubs |
-| **Workflow repos** | `tazama-lf/workflows` (this repo), `frmscoe/workflows` | — | Canonical; not synced to |
+| **Rule repos - tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
+| **Rule repos - frmscoe** | `rule-001` through `rule-091` (33 active repos) | Docker image | Managed via [`frmscoe/workflows`](https://github.com/frmscoe/workflows); receive Docker builds via `package-rule*.yml` caller stubs |
+| **Workflow repos** | `tazama-lf/workflows` (this repo), `frmscoe/workflows` | - | Canonical; not synced to |
 
 ---
 
@@ -31,15 +32,15 @@ The following checks run automatically on pull requests across all repo classes.
 
 | Workflow | What it checks |
 |----------|---------------|
-| `branch-target-check.yml` | PR base branch must be `dev` or `release/v*` when targeting `main` — **fires on PRs to `main` only** |
+| `branch-target-check.yml` | PR base branch must be `dev` or `release/v*` when targeting `main` - **fires on PRs to `main` only** |
 | `conventional-commits.yml` | PR title is validated against the [Conventional Commits](https://www.conventionalcommits.org/) specification |
-| `dco-check.yml` | All commits carry a DCO `Signed-off-by` trailer — ⚠️ [known issue #37](https://github.com/tazama-lf/workflows/issues/37) |
+| `dco-check.yml` | All commits carry a DCO `Signed-off-by` trailer - ⚠️ [known issue #37](https://github.com/tazama-lf/workflows/issues/37) |
 | `gpg-verify.yml` | All commits are GPG-signed |
-| `codacy.yml` | Static analysis via Codacy CLI — ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
+| `codacy.yml` | Static analysis via Codacy CLI - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
 | `codeql.yml` | GitHub CodeQL SAST security scan |
 | `njsscan.yml` | Node.js-specific security scan (semgrep rules) |
 | `dependency-review.yml` | Flags new dependencies with known CVEs or licence restrictions |
-| `node.js.yml` | Build, lint, and test on Node 20 — **not synced; each repo maintains its own copy** |
+| `node.js.yml` | Build, lint, and test on Node 20 - **not synced; each repo maintains its own copy** |
 
 > Pre-commit tooling (local linting, formatting, commit-msg hooks) is developer-local and not managed here. See the project [contribution guide](https://github.com/tazama-lf/tazama-documentation) for local setup guidance.
 
@@ -53,22 +54,22 @@ Library repos publish versioned npm packages under the `@tazama-lf` scope. They 
 
 #### Feature development → dev
 
-1. **Developer** — develops changes on a feature branch.
-2. **Developer — MANUAL** — bumps `version` in `package.json` to `X.Y.Z-rc.N`.
-3. **Developer** — opens pull request targeting `dev`.
-4. **AUTO** — [standard PR check suite](#standard-pr-check-suite) fires.
-5. **Reviewer — MANUAL** — reviews, approves, merges PR to `dev`.
-6. **AUTO** — `publish.yml` fires on `push: dev`; detects the `-rc` suffix; publishes the package to GitHub Packages under the `rc` dist-tag.
+1. **Developer** - develops changes on a feature branch.
+2. **Developer - MANUAL** - bumps `version` in `package.json` to `X.Y.Z-rc.N`.
+3. **Developer** - opens pull request targeting `dev`.
+4. **AUTO** - [standard PR check suite](#standard-pr-check-suite) fires.
+5. **Reviewer - MANUAL** - reviews, approves, merges PR to `dev`.
+6. **AUTO** - `publish.yml` fires on `push: dev`; detects the `-rc` suffix; publishes the package to GitHub Packages under the `rc` dist-tag.
 
 #### Release → main
 
-1. **Developer — MANUAL** — triggers `release-train.yml` via `workflow_dispatch` from `dev`; enters the target stable version (e.g. `4.0.0`, no prerelease suffix).
-2. **AUTO** — `release-train.yml` resolves all `-rc.*` dependencies to their stable equivalents, regenerates `package-lock.json`, and opens a `release/vX.Y.Z → main` PR. Fails if any dependency has no stable release yet.
-3. **Developer — MANUAL** — in the release PR branch, strips the `-rc.N` suffix from `version` in `package.json`.
-4. **AUTO** — `version-check.yml` fires on the PR targeting `main`; blocks merge if the version still contains a prerelease suffix.
-5. **AUTO** — full standard PR check suite also fires on the `main`-targeting PR.
-6. **Reviewer — MANUAL** — reviews and merges the release PR to `main`.
-7. **AUTO** — `publish.yml` fires on `push: main`; detects a clean semver; publishes the package under the `latest` dist-tag.
+1. **Developer - MANUAL** - triggers `release-train.yml` via `workflow_dispatch` from `dev`; enters the target stable version (e.g. `4.0.0`, no prerelease suffix).
+2. **AUTO** - `release-train.yml` resolves all `-rc.*` dependencies to their stable equivalents, regenerates `package-lock.json`, and opens a `release/vX.Y.Z → main` PR. Fails if any dependency has no stable release yet.
+3. **Developer - MANUAL** - in the release PR branch, strips the `-rc.N` suffix from `version` in `package.json`.
+4. **AUTO** - `version-check.yml` fires on the PR targeting `main`; blocks merge if the version still contains a prerelease suffix.
+5. **AUTO** - full standard PR check suite also fires on the `main`-targeting PR.
+6. **Reviewer - MANUAL** - reviews and merges the release PR to `main`.
+7. **AUTO** - `publish.yml` fires on `push: main`; detects a clean semver; publishes the package under the `latest` dist-tag.
 
 ---
 
@@ -78,46 +79,59 @@ Service repos produce versioned Docker images. They do not publish npm packages.
 
 #### Feature development → dev
 
-1. **Developer — MANUAL** — updates library dependency versions in `package.json` to consume any new rc or stable library releases (this step follows the [library release cycle](#1-library-repos-publish_repos) upstream).
-2. **Developer** — develops changes on a feature branch.
-3. **Developer** — opens pull request targeting `dev`.
-4. **AUTO** — [standard PR check suite](#standard-pr-check-suite) fires, plus `dockerfile-linter.yml` if a `Dockerfile` was modified.
-5. **Reviewer — MANUAL** — reviews, approves, merges PR to `dev`.
-6. **AUTO** — `dockerhub-image-build-rc.yml` fires on `push: dev`; builds and pushes the Docker image tagged `:rc` to Docker Hub.
-7. **AUTO** — `scorecard.yml` fires on `push: dev`; runs OSSF supply-chain checks (results published to the Security tab only on `main`, schedule, and `branch_protection_rule` triggers).
+1. **Developer - MANUAL** - updates library dependency versions in `package.json` to consume any new rc or stable library releases (this step follows the [library release cycle](#1-library-repos-publish_repos) upstream).
+2. **Developer** - develops changes on a feature branch.
+3. **Developer** - opens pull request targeting `dev`.
+4. **AUTO** - [standard PR check suite](#standard-pr-check-suite) fires, plus `dockerfile-linter.yml` if a `Dockerfile` was modified.
+5. **Reviewer - MANUAL** - reviews, approves, merges PR to `dev`.
+6. **AUTO** - `dockerhub-image-build-rc.yml` fires on `push: dev`; builds and pushes the Docker image tagged `:rc` to Docker Hub.
+7. **AUTO** - `scorecard.yml` fires on `push: dev`; runs OSSF supply-chain checks (results published to the Security tab only on `main`, schedule, and `branch_protection_rule` triggers).
 
 #### Release → main
 
-1. **Developer** — opens pull request `dev → main`.
-2. **AUTO** — standard PR check suite fires.
-3. **Reviewer — MANUAL** — reviews, approves, merges to `main`.
-4. **AUTO** — `dockerhub-image-build.yml` fires on `push: main`; reads `version` from `package.json`; builds and pushes the Docker image tagged `:X.Y.Z` to Docker Hub.
-5. **AUTO** — `sbom.yml` fires on `push: main`; generates a Software Bill of Materials from the Docker image — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39).
-6. **Release manager — MANUAL** — triggers `milestone.yml` via `workflow_dispatch` in the service repo, supplying the milestone ID.
-7. **AUTO** — `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`.
-8. **AUTO** — `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, and creates the GitHub release with the changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository) — ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
+1. **Developer** - opens pull request `dev → main`.
+2. **AUTO** - standard PR check suite fires.
+3. **Reviewer - MANUAL** - reviews, approves, merges to `main`.
+4. **AUTO** - `dockerhub-image-build.yml` fires on `push: main`; reads `version` from `package.json`; builds and pushes the Docker image tagged `:X.Y.Z` to Docker Hub.
+5. **AUTO** - `sbom.yml` fires on `push: main`; generates a Software Bill of Materials from the Docker image - ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39).
+6. **Release manager - MANUAL** - triggers `milestone.yml` via `workflow_dispatch` in the service repo, supplying the milestone ID.
+7. **AUTO** - `milestone.yml` closes the milestone and fires `release.yml` via `repository_dispatch`.
+8. **AUTO** - `release.yml` determines the version bump from commit messages, generates a changelog from merged PRs, and creates the GitHub release with the changelog as the release body (no `CHANGELOG.md` or `VERSION` files are written to the repository) - ⚠️ [known issue #40](https://github.com/tazama-lf/workflows/issues/40).
 
 ---
 
-### 3. Other service repos (no Docker CI build)
+### 3. Dual-container service repos (case-management-system, connection-studio, rule-studio)
+
+These repos follow the same PR check and release flow as standard Docker-building service repos, but each repo produces **two** Docker images - one from `backend/` and one from `frontend/` - independently versioned via their respective `package.json` files.
+
+They are listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). The dual-image Docker workflows are **not distributed via sync** and must be committed directly to each repo:
+
+- `dockerhub-image-build-dual-rc.yml` - fires on `push: dev`; builds and pushes `tazamaorg/<repo>-backend:rc` and `tazamaorg/<repo>-frontend:rc`
+- `dockerhub-image-build-dual.yml` - fires on `push: main`; builds and pushes `tazamaorg/<repo>-backend:<version>` and `tazamaorg/<repo>-frontend:<version>`
+
+All other steps (PR checks, `sbom.yml`, `scorecard.yml`, `release.yml`, etc.) are identical to [Section 2](#2-service-repos-docker-building).
+
+---
+
+### 4. Other service repos (no Docker CI build)
 
 `relay-service`, `batch-ppa`, `rule-executer`, and `Full-Stack-Docker-Tazama` follow the same feature development and PR check flow as Docker-building service repos but do **not** receive `dockerhub-image-build*.yml` or `sbom.yml`. Their build and release processes (if any) are managed outside this workflow set.
 
 ---
 
-### 4. Rule repos — tazama-lf (rule-901, rule-902)
+### 5. Rule repos - tazama-lf (rule-901, rule-902)
 
 tazama-lf rule repos are both library repos **and** Docker image producers. They follow the full library release cycle for npm publishing (including `release-train.yml`, `publish.yml`, and `version-check.yml`) and additionally build Docker images via the `package-rule*.yml` reusable workflows.
 
-1. **Merged to `dev`** — same as library repos: `publish.yml` fires and publishes the rc npm package.
-2. **AUTO** — `package-rule-rc.yml` caller stub fires on `push: dev`; calls the reusable workflow at `tazama-lf/workflows/.github/workflows/package-rule-rc.yml@dev`; builds and pushes the Docker image tagged `:rc`.
-3. **Release to `main`** — same as library repos: `release-train.yml` resolves deps, opens release PR, `version-check.yml` guards the merge.
-4. **Merged to `main`** — `publish.yml` fires and publishes the stable npm package.
-5. **AUTO** — `package-rule.yml` caller stub fires on `push: main`; calls the reusable workflow; builds and pushes Docker images tagged `:X.Y.Z` and `:latest`.
+1. **Merged to `dev`** - same as library repos: `publish.yml` fires and publishes the rc npm package.
+2. **AUTO** - `package-rule-rc.yml` caller stub fires on `push: dev`; calls the reusable workflow at `tazama-lf/workflows/.github/workflows/package-rule-rc.yml@dev`; builds and pushes the Docker image tagged `:rc`.
+3. **Release to `main`** - same as library repos: `release-train.yml` resolves deps, opens release PR, `version-check.yml` guards the merge.
+4. **Merged to `main`** - `publish.yml` fires and publishes the stable npm package.
+5. **AUTO** - `package-rule.yml` caller stub fires on `push: main`; calls the reusable workflow; builds and pushes Docker images tagged `:X.Y.Z` and `:latest`.
 
 ---
 
-### 5. Rule repos — frmscoe (rule-001 through rule-091)
+### 6. Rule repos - frmscoe (rule-001 through rule-091)
 
 frmscoe rule repos reside in the `frmscoe` organisation and are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which is a manually-maintained mirror of the relevant subset of workflows from this repo. frmscoe rule repos build Docker images via `package-rule*.yml` caller stubs (referencing `frmscoe/workflows` as the reusable workflow source) but do not use `dockerhub-image-build*.yml` or `dockerfile-linter.yml`.
 
@@ -125,34 +139,34 @@ frmscoe rule repos reside in the `frmscoe` organisation and are managed by [`frm
 
 **Not received:** `dockerfile-linter.yml`, `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`.
 
-**Sync trigger in frmscoe/workflows:** `push: dev` (not `pull_request` — sync fires after merge, not on PR open).
+**Sync trigger in frmscoe/workflows:** `push: dev` (not `pull_request` - sync fires after merge, not on PR open).
 
 #### SDLC
 
-1. **Developer** — develops changes on a feature branch.
-2. **Developer** — opens pull request targeting `dev`.
-3. **AUTO** — [standard PR check suite](#standard-pr-check-suite) fires.
-4. **Reviewer — MANUAL** — reviews, approves, merges to `dev`.
-5. **AUTO** — `package-rule-rc.yml` caller stub fires on `push: dev`; builds and pushes the rule Docker image tagged `:rc`.
-6. **Developer** — opens pull request `dev → main` for the release.
-7. **AUTO** — standard PR check suite fires.
-8. **Reviewer — MANUAL** — reviews, approves, merges to `main`.
-9. **AUTO** — `package-rule.yml` caller stub fires on `push: main`; builds and pushes Docker images tagged `:X.Y.Z` and `:latest`.
+1. **Developer** - develops changes on a feature branch.
+2. **Developer** - opens pull request targeting `dev`.
+3. **AUTO** - [standard PR check suite](#standard-pr-check-suite) fires.
+4. **Reviewer - MANUAL** - reviews, approves, merges to `dev`.
+5. **AUTO** - `package-rule-rc.yml` caller stub fires on `push: dev`; builds and pushes the rule Docker image tagged `:rc`.
+6. **Developer** - opens pull request `dev → main` for the release.
+7. **AUTO** - standard PR check suite fires.
+8. **Reviewer - MANUAL** - reviews, approves, merges to `main`.
+9. **AUTO** - `package-rule.yml` caller stub fires on `push: main`; builds and pushes Docker images tagged `:X.Y.Z` and `:latest`.
 
 ---
 
-### 6. Canonical workflow changes (this repo)
+### 7. Canonical workflow changes (this repo)
 
-Changes to this repo propagate to all 26 target repositories. This is the highest-impact SDLC path.
+Changes to this repo propagate to all 31 target repositories. This is the highest-impact SDLC path.
 
-1. **DevOps** — modifies workflow files in `.github/workflows/`; updates the corresponding `workflow-docs/` entry.
-2. **DevOps** — opens pull request targeting `dev`.
-3. **AUTO** — standard PR check suite fires against this repo.
-4. **AUTO** — `sync-workflows.yml` fires; opens `sync-workflows-update` PRs in all 26 target repos — ⚠️ [known issue #36](https://github.com/tazama-lf/workflows/issues/36): fires on PR open, not only on merge. **Do not merge sync PRs in target repos until the source PR here is confirmed merged.**
-5. **Reviewer — MANUAL** — reviews and merges the source PR to `dev` in this repo.
-6. **Reviewers in target repos — MANUAL** — merge `sync-workflows-update` PRs in each target repo.
-7. **DevOps — MANUAL** — applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
-8. **AUTO** — once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
+1. **DevOps** - modifies workflow files in `.github/workflows/`; updates the corresponding `workflow-docs/` entry.
+2. **DevOps** - opens pull request targeting `dev`.
+3. **AUTO** - standard PR check suite fires against this repo.
+4. **Reviewer - MANUAL** - reviews and merges the source PR to `dev` in this repo.
+5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 31 target repos.
+6. **Reviewers in target repos - MANUAL** - merge `sync-workflows-update` PRs in each target repo.
+7. **DevOps - MANUAL** - applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
+8. **AUTO** - once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
 
 ---
 
@@ -169,20 +183,22 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `dco-check.yml` | Verify DCO Signed-off-by on commits | `pull_request` | All repos |
 | `dependency-review.yml` | Flag CVEs and licence issues in new deps | `pull_request` | All repos |
 | `dockerfile-linter.yml` | Hadolint lint of Dockerfiles | `pull_request` | All repos (no-op where no `Dockerfile` exists) |
+| `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]`, `workflow_dispatch` | **Not synced** - committed directly to dual-container repos only |
+| `dockerhub-image-build-dual.yml` | Build and push versioned Docker images for backend and frontend | `push: [main]`, `release: [published]` | **Not synced** - committed directly to dual-container repos only |
 | `dockerhub-image-build-rc.yml` | Build and push `:rc` Docker image | `push: [dev]` | Service repos only (not SPECIFIC_REPOS) |
 | `dockerhub-image-build.yml` | Build and push versioned Docker image | `push: [main]` | Service repos only (not SPECIFIC_REPOS) |
 | `gpg-verify.yml` | Verify GPG signature on commits | `pull_request` | All repos |
 | `milestone.yml` | Close a milestone and trigger `release.yml` | `workflow_dispatch` | All repos |
 | `njsscan.yml` | Node.js security scan (semgrep) | `push`, `pull_request` | All repos |
-| `node.js.yml` | Node 20 CI: build, lint, test | `push: [dev,main]`, `pull_request: [dev,main]` | **Not synced** — each repo maintains its own copy |
+| `node.js.yml` | Node 20 CI: build, lint, test | `push: [dev,main]`, `pull_request: [dev,main]` | **Not synced** - each repo maintains its own copy |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `publish.yml` | Publish npm package to GitHub Packages | `push: [main]`, `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release-train.yml` | Resolve rc deps, prepare release PR, bump version | `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
-| `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos — ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
+| `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos - ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
 | `scorecard.yml` | OSSF Scorecard supply-chain security | `push: [main,dev]`, schedule (weekly), `branch_protection_rule` | Service repos only (not `PUBLISH_REPOS`) |
-| `sync-workflows.yml` | Distribute canonical workflows to all target repos | `pull_request: [dev]`, `workflow_dispatch` | **Not synced** — canonical-only |
+| `sync-workflows.yml` | Distribute canonical workflows to all target repos | `push: [dev]`, `workflow_dispatch` | **Not synced** - canonical-only |
 | `version-check.yml` | Block PR to `main` if `package.json` version has a prerelease suffix | `pull_request: [main]` | `PUBLISH_REPOS` only |
 
 ---
@@ -193,8 +209,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 | Group | Members | Behaviour |
 |-------|---------|-----------|
-| `REPOS` | All 26 tazama-lf target repos | Receive all workflows except those explicitly excluded |
-| `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` | Skip `dockerhub-image-build.yml` and `dockerhub-image-build-rc.yml` |
+| `REPOS` | All 31 tazama-lf target repos | Receive all workflows except those explicitly excluded |
+| `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
 | `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
 
@@ -205,11 +221,11 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
 | `node.js.yml` | Each repo maintains its own copy to allow per-repo customisation |
 
-**Full `REPOS` list (26 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`.
+**Full `REPOS` list (31 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
-> ⚠️ **`sync-workflows-update` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` in every target repo. Do not use this name for regular development contributions — the sync workflow will delete it and recreate it fresh from `dev` on every run. If you have an open `sync-workflows-update` branch in a target repo, be aware it will be force-replaced the next time the workflow runs.
+> ⚠️ **`sync-workflows-update` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` in every target repo. Do not use this name for regular development contributions - the sync workflow will delete it and recreate it fresh from `dev` on every run. If you have an open `sync-workflows-update` branch in a target repo, be aware it will be force-replaced the next time the workflow runs.
 
 ---
 
@@ -217,17 +233,17 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 When a new repository is created in the Tazama ecosystem, it needs to be enrolled in sync so it receives canonical workflows automatically on future updates. The steps depend on the [repository class](#repository-classes).
 
-### Step 1 — Determine the repository class
+### Step 1 - Determine the repository class
 
 | Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml`? |
 |-------|----------------------------------|-----------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
 | Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
-| Rule repo — tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
-| Rule repo — frmscoe | n/a — managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows) | n/a |
+| Rule repo - tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Rule repo - frmscoe | n/a - managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows) | n/a |
 
-### Step 2 — Add the repo to `sync-workflows.yml` in this repo
+### Step 2 - Add the repo to `sync-workflows.yml` in this repo
 
 Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropriate `env` lists:
 
@@ -236,9 +252,9 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 - **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
 - **tazama-lf rule repo**: also add to `RULE_REPOS`
 
-> Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) — full org migration pending).
+> Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) - full org migration pending).
 
-### Step 3 — Bootstrap the new repo's workflow directory
+### Step 3 - Bootstrap the new repo's workflow directory
 
 `sync-workflows.yml` only runs against repos that already have a `.github/workflows/` directory. For a brand-new repo, copy the relevant workflows manually from this repo's `.github/workflows/` before raising the sync PR:
 
@@ -248,13 +264,13 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 4. Commit directly to `dev` in the new repo (or raise a bootstrap PR).
 5. Copy `node.js.yml` manually and customise it for the repo (it is never synced).
 
-### Step 4 — Open a PR to `dev` in this repo
+### Step 4 - Open a PR to `dev` in this repo
 
-Raise a PR with the `sync-workflows.yml` changes from Step 2. When the PR is opened, `sync-workflows.yml` runs (due to the `pull_request: dev` trigger) and creates `sync-workflows-update` PRs in all existing repos — the new entry will be included.
+Raise a PR with the `sync-workflows.yml` changes from Step 2. When the PR is opened, `sync-workflows.yml` runs (due to the `pull_request: dev` trigger) and creates `sync-workflows-update` PRs in all existing repos - the new entry will be included.
 
-> ⚠️ Do not merge the sync PRs in target repos until this source PR is confirmed merged — see [known issue #36](https://github.com/tazama-lf/workflows/issues/36).
+> ⚠️ Do not merge the sync PRs in target repos until this source PR is confirmed merged - see [known issue #36](https://github.com/tazama-lf/workflows/issues/36).
 
-### Step 5 — Update `workflow-docs/`
+### Step 5 - Update `workflow-docs/`
 
 Add a documentation file for any new canonical workflow using [`workflow-docs/docs-template.md`](workflow-docs/docs-template.md) as a starting point, and update the [Canonical Workflow Reference](#canonical-workflow-reference) table and [Sync Distribution](#sync-distribution) section if the new repo changes group membership.
 
@@ -336,9 +352,9 @@ Active bugs where workflow behaviour differs from expectation. See the [issues t
 
 | Issue | Affected workflow(s) | Reference |
 |-------|---------------------|-----------|
-| `sync-workflows.yml` fires on all PR events to `dev`, not only on merge — do not merge sync PRs in target repos until the source PR here is confirmed merged | `sync-workflows.yml` | [#36](https://github.com/tazama-lf/workflows/issues/36) |
-| `dco-check.yml` uses a reversed `git log` range — DCO sign-off is not being verified on the actual PR commits | `dco-check.yml` | [#37](https://github.com/tazama-lf/workflows/issues/37) |
-| Codacy CLI crashes with `MalformedInputException` on checkov output from multi-line YAML files — workaround: add `.checkov.yaml` with `skip-framework: github_actions` at the repo root | `codacy.yml` | [#38](https://github.com/tazama-lf/workflows/issues/38) |
+| `sync-workflows.yml` fires on all PR events to `dev`, not only on merge - do not merge sync PRs in target repos until the source PR here is confirmed merged | `sync-workflows.yml` | [#36](https://github.com/tazama-lf/workflows/issues/36) |
+| `dco-check.yml` uses a reversed `git log` range - DCO sign-off is not being verified on the actual PR commits | `dco-check.yml` | [#37](https://github.com/tazama-lf/workflows/issues/37) |
+| Codacy CLI crashes with `MalformedInputException` on checkov output from multi-line YAML files - workaround: add `.checkov.yaml` with `skip-framework: github_actions` at the repo root | `codacy.yml` | [#38](https://github.com/tazama-lf/workflows/issues/38) |
 | `sbom.yml` is synced to library and rule repos but runs `docker build`, which fails in repos without a `Dockerfile` | `sbom.yml` | [#39](https://github.com/tazama-lf/workflows/issues/39) |
 | `milestone.yml` and `release.yml` use the deprecated `::set-output` syntax and `actions/checkout@v2` | `milestone.yml`, `release.yml` | [#40](https://github.com/tazama-lf/workflows/issues/40) |
-| Service repo clone URLs in `sync-workflows.yml` still use the `frmscoe` org — full migration to `tazama-lf` is pending | `sync-workflows.yml` | [#28](https://github.com/tazama-lf/workflows/issues/28) |
+| Service repo clone URLs in `sync-workflows.yml` still use the `frmscoe` org - full migration to `tazama-lf` is pending | `sync-workflows.yml` | [#28](https://github.com/tazama-lf/workflows/issues/28) |
