@@ -46,6 +46,10 @@ jobs:
         run: |
           echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
 
+      - name: Use the custom ENV variable
+        run: |
+          echo $REPO_NAME
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf
@@ -102,6 +106,10 @@ jobs:
       - name: Set ENV variables
         run: |
           echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
+
+      - name: Use the custom ENV variable
+        run: |
+          echo $REPO_NAME
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
