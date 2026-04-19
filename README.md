@@ -22,6 +22,7 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
 | **Rule repos - tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
 | **Rule repos - frmscoe** | `rule-001` through `rule-091` (33 active repos) | Docker image | Managed via [`frmscoe/workflows`](https://github.com/frmscoe/workflows); receive Docker builds via `package-rule*.yml` caller stubs |
+| **Multi-image service repos** | `biar` | Docker images (5) | Produces 5 Docker images from subdirectories (`automation-orchestrator/`, `datalakehouse-api/`, `JupyterHub/`, `unstructured-pipeline/`, `nifi/`); in `SPECIFIC_REPOS` so does not receive single-image `dockerhub-image-build*.yml`; uses its own `dockerhub-image-build-multi*.yml` committed directly; mixed Python + TypeScript codebase |
 | **Workflow repos** | `tazama-lf/workflows` (this repo), `frmscoe/workflows` | - | Canonical; not synced to |
 
 ---
@@ -155,15 +156,34 @@ frmscoe rule repos reside in the `frmscoe` organisation and are managed by [`frm
 
 ---
 
-### 7. Canonical workflow changes (this repo)
+### 7. Multi-image service repos (biar)
 
-Changes to this repo propagate to all 31 target repositories. This is the highest-impact SDLC path.
+BIAR is a mixed Python (PySpark) + TypeScript codebase that produces **5 Docker images** from separate subdirectories. It follows the same PR check and release flow as standard Docker-building service repos, but uses custom multi-image Docker publish workflows instead of the single-image or dual-image variants.
+
+It is listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). The multi-image Docker workflows are **not distributed via sync** and must be committed directly to the repo:
+
+- `dockerhub-image-build-multi-rc.yml` — fires on `push: dev`; builds and pushes 5 images tagged `:rc` to Docker Hub
+- `dockerhub-image-build-multi.yml` — fires on `push: main`; builds and pushes 5 images tagged `:{version}` to Docker Hub
+
+Image names follow the pattern `tazamaorg/biar-{service}:{tag}` (e.g. `tazamaorg/biar-automation-orchestrator:rc`).
+
+The repo also maintains a custom `ci.yml` (unified TypeScript build/lint/test + Python linting + Docker build check) instead of the standard `node.js.yml`.
+
+All other steps (PR checks, `scorecard.yml`, `release.yml`, etc.) are identical to [Section 2](#2-service-repos-docker-building).
+
+> **Note:** The synced `sbom.yml` is a no-op for BIAR (no root-level `Dockerfile`). SBOM coverage for multi-image repos is tracked in [#81](https://github.com/tazama-lf/workflows/issues/81).
+
+---
+
+### 8. Canonical workflow changes (this repo)
+
+Changes to this repo propagate to all 32 target repositories. This is the highest-impact SDLC path.
 
 1. **DevOps** - modifies workflow files in `.github/workflows/`; updates the corresponding `workflow-docs/` entry.
 2. **DevOps** - opens pull request targeting `dev`.
 3. **AUTO** - standard PR check suite fires against this repo.
 4. **Reviewer - MANUAL** - reviews and merges the source PR to `dev` in this repo.
-5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 31 target repos.
+5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 32 target repos.
 6. **Reviewers in target repos - MANUAL** - merge `sync-workflows-update` PRs in each target repo.
 7. **DevOps - MANUAL** - applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
 8. **AUTO** - once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
@@ -209,8 +229,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 | Group | Members | Behaviour |
 |-------|---------|-----------|
-| `REPOS` | All 31 tazama-lf target repos | Receive all workflows except those explicitly excluded |
-| `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
+| `REPOS` | All 32 tazama-lf target repos | Receive all workflows except those explicitly excluded |
+| `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) + multi-image repos (`biar`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
 | `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
 
@@ -221,7 +241,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
 | `node.js.yml` | Each repo maintains its own copy to allow per-repo customisation |
 
-**Full `REPOS` list (31 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`.
+**Full `REPOS` list (32 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
@@ -238,6 +258,8 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 | Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml`? |
 |-------|----------------------------------|-----------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
+| Dual-container service repo | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
+| Multi-image service repo (biar) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
 | Rule repo - tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
@@ -248,7 +270,7 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropriate `env` lists:
 
 - **Always**: add to `REPOS`
-- **Other service or library or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
+- **Other service, dual-container, multi-image, library, or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
 - **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
 - **tazama-lf rule repo**: also add to `RULE_REPOS`
 
