@@ -105,6 +105,7 @@ jobs:
             case-management-system
             connection-studio
             rule-studio
+            biar
           SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
           SPECIFIC_REPOS: |  # Repos that do NOT build Docker images - receive all workflows except SPECIFIC_FILES
             relay-service
@@ -126,6 +127,7 @@ jobs:
             case-management-system
             connection-studio
             rule-studio
+            biar
           PUBLISH_REPOS: |  # Library repos that publish npm packages - the only repos that receive publish.yml and version-check.yml
             frms-coe-lib
             frms-coe-startup-lib
