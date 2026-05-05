@@ -202,6 +202,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `codeql.yml` | GitHub CodeQL SAST | `push: [dev,main]`, `pull_request: [dev,main]`, schedule | All repos |
 | `conventional-commits.yml` | Validate Conventional Commits spec | `pull_request` | All repos |
 | `dco-check.yml` | Verify DCO Signed-off-by on commits | `pull_request` | All repos |
+| `encoding-check.yml` | Fail a PR if any changed file is UTF-16 or UTF-8 BOM encoded | `pull_request` | All repos |
 | `dependency-review.yml` | Flag CVEs and licence issues in new deps | `pull_request` | All repos |
 | `dockerfile-linter.yml` | Hadolint lint of Dockerfiles | `pull_request` | All repos (no-op where no `Dockerfile` exists) |
 | `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]`, `workflow_dispatch` | **Not synced** - committed directly to dual-container repos only |
