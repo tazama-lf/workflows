@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Node.js CI pipeline with three parallel jobs - build, lint, and test - running against Node.js 20. Validates that the project compiles, passes linting rules, and all tests pass on every push and pull request to `dev` and `main`.
+Caller stub that delegates Node.js CI to the centralised reusable workflow [`node-ci.yml`](node-ci.md). Contains only the push/PR triggers and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -17,58 +17,36 @@ Node.js CI pipeline with three parallel jobs - build, lint, and test - running a
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Node version | `20` |
-| Typical duration | ~2–5 min |
-| Concurrency | none |
-| Permissions | default |
-
----
-
-## Environment Variables
-
-| Variable | Value | Purpose |
-|----------|-------|--------|
-| `GH_TOKEN` | `secrets.GITHUB_TOKEN` | npm auth for private packages |
-| `NPM_SCOPE` | `@frmscoe` | npm scope for registry routing |
-| `NPM_REGISTRY` | `https://npm.pkg.github.com/` | GitHub Packages registry |
-| `NODE_ENV` | `test` | sets test environment |
-| `STARTUP_TYPE` | `nats` | messaging system type expected by some tests |
+All execution context is defined in [`node-ci.yml`](node-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `build` - run build
+### `node-ci`
 
-1. `actions/checkout@v4`
-2. `actions/setup-node@v4` - Node 20, npm cache, registry and scope
-3. `npm ci`
-4. `npm run build`
+Delegates entirely to the reusable workflow:
 
-### `lint` - check style
+```yaml
+uses: tazama-lf/workflows/.github/workflows/node-ci.yml@dev
+secrets: inherit
+```
 
-1. `actions/checkout@v4`
-2. `actions/setup-node@v4`
-3. `npm ci`
-4. `npm run lint`
-
-### `test` - check tests
-
-1. `actions/checkout@v4`
-2. `actions/setup-node@v4`
-3. `npm ci`
-4. `npm test`
+See [`node-ci.yml` documentation](node-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-| Secret | Scope | Purpose |
-|--------|-------|-------|
-| `GITHUB_TOKEN` | auto | npm authentication via `GH_TOKEN` |
+All secrets are passed through via `secrets: inherit`. See [`node-ci.yml`](node-ci.md) for the list.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
 
 ---
 
@@ -76,27 +54,20 @@ Node.js CI pipeline with three parallel jobs - build, lint, and test - running a
 
 | Group | Behaviour |
 |-------|----------|
-| **All repos** | **Excluded from sync** - `node.js.yml` is explicitly removed before the sync bundle is assembled; every repo maintains its own copy |
+| **All repos** | Synced - identical stub distributed to all 32 consumer repos |
+
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.
 
 ---
 
 ## Dependencies (pinned actions)
 
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-| `actions/setup-node` | tag ref `v4` | - |
+None - this file contains no `uses:` action steps, only the reusable workflow reference.
 
 ---
 
 ## Known Limitations / Notes
 
-- Excluded from sync to preserve per-repo customisations (some repos have additional jobs or environment-specific configurations). Any changes to the canonical file must be propagated manually to each repo (see `update-workflows.md` Track A6 / Track B4).
-- `NPM_SCOPE` is set to `@frmscoe`; this is intentional as many private packages are still published under the `@frmscoe` scope.
-- `dependabot[bot]` actors are excluded.
-
----
-
-## Repository Overrides
-
-Not applicable - this workflow is not synced; every repo maintains its own copy. Some repos previously had a `bench` job included in this file; that job is being removed via separate PRs.
+- Logic changes belong in [`node-ci.yml`](node-ci.md), not here.
+- `dependabot[bot]` actor exclusions are enforced inside `node-ci.yml`.
+- The stub is identical across all consumer repos; repo-specific CI behaviour is not supported under this pattern. If a repo genuinely needs different CI behaviour it should maintain its own workflow and opt out of the sync for that file.
