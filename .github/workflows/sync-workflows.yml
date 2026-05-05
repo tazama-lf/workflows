@@ -196,8 +196,8 @@ jobs:
               if in_list "$repo" "$SPECIFIC_REPOS" && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
                 continue
               fi
-              # publish.yml, version-check.yml, and release-train.yml: only copy to designated library repos
-              if [[ "${filename}" == "publish.yml" || "${filename}" == "version-check.yml" || "${filename}" == "release-train.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
+              # publish.yml, version-check.yml, release-train.yml, and library-dependency-rollout.yml: only copy to designated library repos
+              if [[ "${filename}" == "publish.yml" || "${filename}" == "version-check.yml" || "${filename}" == "release-train.yml" || "${filename}" == "library-dependency-rollout.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
                 continue
               fi
               # package-rule*.yml canonical definitions: never copy to rule repos - stubs are stamped below

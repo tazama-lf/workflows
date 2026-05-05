@@ -1,0 +1,319 @@
+{
+  "@tazama-lf/frms-coe-lib": {
+    "source-repo": "frms-coe-lib",
+    "consumers": [
+      {
+        "org": "tazama-lf",
+        "repo": "admin-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "auth-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "batch-ppa"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "data-enrichment-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-director"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-monitoring-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-sidecar"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "lumberjack"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "nats-utilities"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "rule-901"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "rule-902"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "rule-executer"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "rule-studio-example"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "tms-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "transaction-aggregation-decisioning-processor"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "typology-processor"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-001"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-002"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-003"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-004"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-006"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-007"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-008"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-010"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-011"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-016"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-017"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-018"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-020"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-021"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-024"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-025"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-026"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-027"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-028"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-030"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-044"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-045"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-048"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-054"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-063"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-074"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-075"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-076"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-078"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-083"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-084"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-090"
+      },
+      {
+        "org": "frmscoe",
+        "repo": "rule-091"
+      }
+    ]
+  },
+  "@tazama-lf/frms-coe-startup-lib": {
+    "source-repo": "frms-coe-startup-lib",
+    "consumers": [
+      {
+        "org": "tazama-lf",
+        "repo": "admin-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "auth-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "data-enrichment-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-director"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-monitoring-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "rule-executer"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "tms-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "transaction-aggregation-decisioning-processor"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "typology-processor"
+      }
+    ]
+  },
+  "@tazama-lf/auth-lib": {
+    "source-repo": "auth-lib",
+    "consumers": [
+      {
+        "org": "tazama-lf",
+        "repo": "admin-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "auth-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "data-enrichment-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "event-monitoring-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "tms-service"
+      }
+    ]
+  },
+  "@tazama-lf/auth-lib-provider-keycloak": {
+    "source-repo": "auth-lib-provider-keycloak",
+    "consumers": [
+      {
+        "org": "tazama-lf",
+        "repo": "auth-service"
+      }
+    ]
+  },
+  "@tazama-lf/tcs-lib": {
+    "source-repo": "tcs-lib",
+    "consumers": [
+      {
+        "org": "tazama-lf",
+        "repo": "admin-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "data-enrichment-service"
+      }
+    ]
+  },
+  "@tazama-lf/audit-lib": {
+    "source-repo": "audit-lib",
+    "consumers": []
+  },
+  "@tazama-lf/nats-relay-plugin": {
+    "source-repo": "relay-service-integration-nats",
+    "consumers": []
+  },
+  "@tazama-lf/rest-relay-plugin": {
+    "source-repo": "relay-service-integration-rest",
+    "consumers": []
+  },
+  "@tazama-lf/kafka-relay-plugin": {
+    "source-repo": "relay-service-integration-kafka",
+    "consumers": []
+  },
+  "@tazama-lf/rabbitmq-relay-plugin": {
+    "source-repo": "relay-service-integration-rabbitmq",
+    "consumers": []
+  }
+}

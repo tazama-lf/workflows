@@ -61,6 +61,7 @@ Library repos publish versioned npm packages under the `@tazama-lf` scope. They 
 4. **AUTO** - [standard PR check suite](#standard-pr-check-suite) fires.
 5. **Reviewer - MANUAL** - reviews, approves, merges PR to `dev`.
 6. **AUTO** - `publish.yml` fires on `push: dev`; detects the `-rc` suffix; publishes the package to GitHub Packages under the `rc` dist-tag.
+7. **AUTO** - `library-dependency-rollout.yml` fires on `push: dev` (path: `package.json`); updates the exact version pin in every registered consumer repo's `package.json`, regenerates `package-lock.json`, commits to `dep/library-dependency-bump`, and opens (or updates) a `dep/library-dependency-bump → dev` PR in each consumer. If a PR already exists from a prior library bump it is reused - multiple library updates coalesce into a single open PR per consumer.
 
 #### Release → main
 
@@ -213,6 +214,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `node.js.yml` | Node 20 CI: build, lint, test | `push: [dev,main]`, `pull_request: [dev,main]` | **Not synced** - each repo maintains its own copy |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
+| `library-dependency-rollout.yml` | On rc version merge to `dev` in a library repo, update the exact version pin in every registered consumer's `package.json`, regenerate `package-lock.json`, and open (or update) a `dep/library-dependency-bump → dev` PR | `push: [dev]` (path: `package.json`), `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `publish.yml` | Publish npm package to GitHub Packages | `push: [main]`, `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release-train.yml` | Resolve rc deps, prepare release PR, bump version | `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
@@ -231,7 +233,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 |-------|---------|-----------|
 | `REPOS` | All 32 tazama-lf target repos | Receive all workflows except those explicitly excluded |
 | `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) + multi-image repos (`biar`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
-| `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`; skip `scorecard.yml` |
+| `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`, `library-dependency-rollout.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
 
 **Always excluded from the sync bundle:**
@@ -247,6 +249,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 > ⚠️ **`sync-workflows-update` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` in every target repo. Do not use this name for regular development contributions - the sync workflow will delete it and recreate it fresh from `dev` on every run. If you have an open `sync-workflows-update` branch in a target repo, be aware it will be force-replaced the next time the workflow runs.
 
+> ⚠️ **`dep/library-dependency-bump` is a reserved branch name.** This branch is created and managed by `library-dependency-rollout.yml` in every consumer repo. Do not use this name for regular development contributions. Multiple library bumps coalesce onto this branch - the workflow pushes new commits onto an existing branch rather than creating a new one.
+
 ---
 
 ## Adding Automation to a New Repository
@@ -255,13 +259,13 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 
 ### Step 1 - Determine the repository class
 
-| Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml`? |
-|-------|----------------------------------|-----------------------------------------------|
+| Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml` / `library-dependency-rollout.yml`? |
+|-------|----------------------------------|-----------------------------------------------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
 | Dual-container service repo | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Multi-image service repo (biar) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
-| Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
+| Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`); also add entry to `library-consumers.json` if it will be consumed by other repos |
 | Rule repo - tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
 | Rule repo - frmscoe | n/a - managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows) | n/a |
 
@@ -299,6 +303,25 @@ Add a documentation file for any new canonical workflow using [`workflow-docs/do
 ---
 
 ## Routine Maintenance
+
+### Updating the library consumer catalog (`library-consumers.json`)
+
+`library-consumers.json` at the root of this repo is the canonical list of which repos consume which `@tazama-lf/*` library packages. It drives `library-dependency-rollout.yml`. The catalog is fetched at runtime by the rollout workflow from `tazama-lf/workflows@dev` - no library repo stores or owns the consumer list.
+
+**When to update:** when a new consumer repo is created, when a repo stops consuming a library, or when a new library is added.
+
+> You only ever update this file in `tazama-lf/workflows`. You do not need to touch any library repo. The next time any library merges to `dev`, the rollout will automatically include the new consumer.
+
+1. Optionally re-run `audit-library-consumers.js` (in `C:\DevTools\GitHub\`) to regenerate the file from live data:
+   ```
+   node audit-library-consumers.js --token <gh-pat>
+   ```
+2. Review the output in `library-consumers.json`.
+3. Open a PR to `dev` in this repo with the updated file.
+
+Alternatively, edit `library-consumers.json` directly and open a PR.
+
+---
 
 ### Pinned action SHA updates
 
