@@ -13,6 +13,9 @@ on:
   pull_request:
     branches: [ "dev", "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   node-ci:
     uses: tazama-lf/workflows/.github/workflows/node-ci.yml@dev
