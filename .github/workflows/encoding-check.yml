@@ -13,6 +13,8 @@ on:
 
 jobs:
   encoding-check:
+    permissions:
+      contents: read
     if: |
       github.actor != 'dependabot[bot]' &&
       github.actor != 'dependabot-preview[bot]' &&
