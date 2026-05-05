@@ -153,7 +153,7 @@ jobs:
           mkdir -p temp-workflows
           cp -r .github/workflows/* temp-workflows/
           rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
-          rm -f temp-workflows/node.js.yml  # Remove per-repo CI workflow to avoid overwriting repo-specific benchmarks
+          rm -f temp-workflows/node-ci.yml           # Reusable workflow: called by reference from node.js.yml stub; consumer repos don't need a local copy
           rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
           rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
 
