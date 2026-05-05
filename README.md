@@ -259,8 +259,8 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 
 ### Step 1 - Determine the repository class
 
-| Class | Receives Docker build workflows? | Receives `publish.yml` / `release-train.yml` / `library-dependency-rollout.yml`? |
-|-------|----------------------------------|-----------------------------------------------------------------------------------|
+| Class | Receives Docker build workflows? | Receives `publish.yml` / `version-check.yml` / `release-train.yml` / `library-dependency-rollout.yml`? |
+|-------|----------------------------------|----------------------------------------------------------------------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
 | Dual-container service repo | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Multi-image service repo (biar) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
@@ -312,8 +312,9 @@ Add a documentation file for any new canonical workflow using [`workflow-docs/do
 
 > You only ever update this file in `tazama-lf/workflows`. You do not need to touch any library repo. The next time any library merges to `dev`, the rollout will automatically include the new consumer.
 
-1. Optionally re-run `audit-library-consumers.js` (in `C:\DevTools\GitHub\`) to regenerate the file from live data:
-   ```
+1. Optionally re-run your local copy of `audit-library-consumers.js` to regenerate the file from live data:
+
+   ```bash
    node audit-library-consumers.js --token <gh-pat>
    ```
 2. Review the output in `library-consumers.json`.

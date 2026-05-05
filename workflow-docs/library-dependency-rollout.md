@@ -47,7 +47,7 @@ Only runs for rc versions (e.g. `4.0.0-rc.3`). Stable-version dependency resolut
    - Clones the consumer repo (`--depth=50`)
    - Checks out `dev`; verifies `package.json` exists and contains the library as a dependency
    - Creates or checks out the `dep/library-dependency-bump` branch
-   - Updates the exact version pin in `dependencies` or `devDependencies` via an inline Node.js script (preserves `package.json` formatting)
+   - Updates the exact version pin in `dependencies` or `devDependencies` using `jq` (rewrites the file; formatting and key ordering may change)
    - Configures `~/.npmrc` for `@tazama-lf` and `@frmscoe` GitHub Packages scopes
    - Runs `npm install --package-lock-only --ignore-scripts` (3 attempts, 30 s delay between retries)
    - Commits `package.json` + `package-lock.json` with SSH signing and a DCO `Signed-off-by` trailer
@@ -100,7 +100,7 @@ When multiple libraries are bumped in quick succession:
 
 1. `frms-coe-lib` merges → rollout creates `dep/library-dependency-bump` in each consumer and opens a PR.
 2. `frms-coe-startup-lib` merges → rollout detects the existing branch and open PR, pushes an additional commit, and logs the PR URL. No duplicate PR is created.
-3. The consumer's PR now contains bumps for both libraries; the PR body lists all packages updated on the branch.
+3. The `dep/library-dependency-bump` branch now contains commits for both bumps; the existing PR is reused but its body is not updated.
 
 **Race condition:** If two library rollouts push to the same consumer branch concurrently, the second push may fail with `--force-with-lease`. In that case, re-run the workflow for the failing library to retry.
 
@@ -121,5 +121,5 @@ When multiple libraries are bumped in quick succession:
 
 | Group | Behaviour |
 |-------|-----------|
-| `PUBLISH_REPOS` | Receives this file (library repos only) |
+| `PUBLISH_REPOS` | Receives this file (publish-capable repos: library repos + `rule-901`, `rule-902`) |
 | All other groups | Does not receive this file |
