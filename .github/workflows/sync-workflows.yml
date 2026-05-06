@@ -149,6 +149,9 @@ jobs:
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
 
+          # Capture the workspace root so we can reference config-templates/ after cd-ing into each repo
+          WORKFLOWS_ROOT="${GITHUB_WORKSPACE}"
+
           # Build the temp-workflows bundle once, outside the repo loop
           mkdir -p temp-workflows
           cp -r .github/workflows/* temp-workflows/
@@ -253,7 +256,9 @@ jobs:
               echo "Stamped caller stubs for rule-${RULE_NUM} (tazama-lf)"
             fi
             cd "$repo"
-            git add .github/workflows/
+            # Copy .codacy.yml to repo root - standard engine allowlist for TS/Node repos
+            cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
+            git add .github/workflows/ .codacy.yml
             git commit -m "ci: sync workflows from central-workflows" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
             git push origin sync-workflows-update || git push origin sync-workflows-update --force
 
