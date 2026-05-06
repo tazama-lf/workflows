@@ -41,7 +41,7 @@ The following checks run automatically on pull requests across all repo classes.
 | `codeql.yml` | GitHub CodeQL SAST security scan |
 | `njsscan.yml` | Node.js-specific security scan (semgrep rules) |
 | `dependency-review.yml` | Flags new dependencies with known CVEs or licence restrictions |
-| `node.js.yml` | Build, lint, and test on Node 20 - **not synced; each repo maintains its own copy** |
+| `node.js.yml` | Build, lint, and test on Node 20 - caller stub; delegates to `node-ci.yml` (synced to all repos) |
 
 > Pre-commit tooling (local linting, formatting, commit-msg hooks) is developer-local and not managed here. See the project [contribution guide](https://github.com/tazama-lf/tazama-documentation) for local setup guidance.
 
@@ -212,7 +212,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `gpg-verify.yml` | Verify GPG signature on commits | `pull_request` | All repos |
 | `milestone.yml` | Close a milestone and trigger `release.yml` | `workflow_dispatch` | All repos |
 | `njsscan.yml` | Node.js security scan (semgrep) | `push`, `pull_request` | All repos |
-| `node.js.yml` | Node 20 CI: build, lint, test | `push: [dev,main]`, `pull_request: [dev,main]` | **Not synced** - each repo maintains its own copy |
+| `node-ci.yml` | Reusable: Node 20 CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |\n| `node.js.yml` | Caller stub: delegates Node 20 CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `library-dependency-rollout.yml` | On rc version merge to `dev` in a library repo, update the exact version pin in every registered consumer's `package.json`, regenerate `package-lock.json`, and open (or update) a `dep/library-dependency-bump → dev` PR | `push: [dev]` (path: `package.json`), `workflow_dispatch` | `PUBLISH_REPOS` only |
@@ -242,7 +242,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | File | Reason |
 |------|--------|
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
-| `node.js.yml` | Each repo maintains its own copy to allow per-repo customisation |
+| `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
 
 **Full `REPOS` list (32 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`.
 
