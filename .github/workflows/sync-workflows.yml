@@ -259,7 +259,7 @@ jobs:
             # Copy .codacy.yml to repo root - standard engine allowlist for TS/Node repos
             cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
             git add .github/workflows/ .codacy.yml
-            git commit -m "ci: sync workflows from central-workflows" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
+            git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
             git push origin sync-workflows-update || git push origin sync-workflows-update --force
 
             # Create the PR with reviewers
@@ -270,7 +270,7 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            gh pr create --title "ci: sync workflows from central-workflows" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
+            gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
 
             cd ..
           done
