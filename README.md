@@ -212,7 +212,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `gpg-verify.yml` | Verify GPG signature on commits | `pull_request` | All repos |
 | `milestone.yml` | Close a milestone and trigger `release.yml` | `workflow_dispatch` | All repos |
 | `njsscan.yml` | Node.js security scan (semgrep) | `push`, `pull_request` | All repos |
-| `node-ci.yml` | Reusable: Node 22 LTS CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |\n| `node.js.yml` | Caller stub: delegates Node 22 LTS CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
+| `node-ci.yml` | Reusable: Node 22 LTS CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `node.js.yml` | Caller stub: delegates Node 22 LTS CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `library-dependency-rollout.yml` | On rc version merge to `dev` in a library repo, update the exact version pin in every registered consumer's `package.json`, regenerate `package-lock.json`, and open (or update) a `dep/library-dependency-bump → dev` PR | `push: [dev]` (path: `package.json`), `workflow_dispatch` | `PUBLISH_REPOS` only |
