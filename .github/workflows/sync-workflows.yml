@@ -149,6 +149,9 @@ jobs:
         run: |
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
 
+          # Capture the workspace root so we can reference config-templates/ after cd-ing into each repo
+          WORKFLOWS_ROOT="${GITHUB_WORKSPACE}"
+
           # Build the temp-workflows bundle once, outside the repo loop
           mkdir -p temp-workflows
           cp -r .github/workflows/* temp-workflows/
@@ -253,8 +256,12 @@ jobs:
               echo "Stamped caller stubs for rule-${RULE_NUM} (tazama-lf)"
             fi
             cd "$repo"
-            git add .github/workflows/
-            git commit -m "ci: sync workflows from central-workflows" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
+            # Copy .codacy.yml to repo root - standard engine allowlist for TS/Node repos
+            cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
+            # Remove legacy dco-check.yaml (wrong extension - canonical is dco-check.yml)
+            rm -f .github/workflows/dco-check.yaml
+            git add -A .github/workflows/ .codacy.yml
+            git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
             git push origin sync-workflows-update || git push origin sync-workflows-update --force
 
             # Create the PR with reviewers
@@ -265,7 +272,9 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            gh pr create --title "ci: sync workflows from central-workflows" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
+            if ! gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS; then
+              gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" || echo "PR already exists but could not be updated"
+            fi
 
             cd ..
           done
