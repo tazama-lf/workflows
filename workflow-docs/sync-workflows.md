@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Propagates canonical workflow files and the standard `.codacy.yml` engine allowlist from this repository to all configured target repos. When commits land on `dev` (i.e. a PR is merged or a direct push is made), it clones each target repo, copies the applicable workflow files according to per-file sync rules, copies `config-templates/.codacy.yml` to the repo root, and opens a `sync-workflows-update` PR in each target repo. `sync-workflows.yml` and `node.js.yml` are explicitly excluded from the bundle.
+Propagates canonical workflow files and the standard `.codacy.yml` engine allowlist from this repository to all configured target repos. When commits land on `dev` (i.e. a PR is merged or a direct push is made), it clones each target repo, copies the applicable workflow files according to per-file sync rules, copies `config-templates/.codacy.yml` to the repo root, and opens a `sync-workflows-update` PR in each target repo. `sync-workflows.yml` and `node-ci.yml` are explicitly excluded from the bundle.
 
 ---
 
@@ -80,7 +80,9 @@ Propagates canonical workflow files and the standard `.codacy.yml` engine allowl
 
 ## Known Limitations / Notes
 
-- The workflow fires on `push` to `dev`, so it only runs when commits actually land on the branch (typically after a PR merge). `sync-workflows-update` PRs in target repos should be safe to review and merge as soon as they appear.- **`[skip ci]` in sync PRs:** the branch commit message and PR title both contain `[skip ci]`. When squash-merged (the default strategy), the resulting commit on `dev` in the target repo suppresses all push-triggered workflows. This prevents unnecessary CI and Docker publish runs for pure workflow distribution changes. Normal development PRs are not affected.- **`sync-workflows-update` is a reserved branch name.** The workflow deletes and recreates it on every run. Do not use this name for regular development contributions; any pushed commits will be discarded on the next sync run.
+- The workflow fires on `push` to `dev`, so it only runs when commits actually land on the branch (typically after a PR merge). `sync-workflows-update` PRs in target repos should be safe to review and merge as soon as they appear.
+- **`[skip ci]` in sync PRs:** the branch commit message and PR title both contain `[skip ci]`. When squash-merged (the default strategy), the resulting commit on `dev` in the target repo suppresses all push-triggered workflows. This prevents unnecessary CI and Docker publish runs for pure workflow distribution changes. Normal development PRs are not affected.
+- **`sync-workflows-update` is a reserved branch name.** The workflow deletes and recreates it on every run. Do not use this name for regular development contributions; any pushed commits will be discarded on the next sync run.
 - Target repos must have a `dev` branch. If absent, the workflow creates one from the repo’s default branch automatically.
 - `dependabot[bot]` actors are excluded.
 

@@ -272,7 +272,9 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS || echo "PR already exists, updating existing PR"
+            if ! gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS; then
+              gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" || echo "PR already exists but could not be updated"
+            fi
 
             cd ..
           done
