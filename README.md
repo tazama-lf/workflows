@@ -41,7 +41,7 @@ The following checks run automatically on pull requests across all repo classes.
 | `codeql.yml` | GitHub CodeQL SAST security scan |
 | `njsscan.yml` | Node.js-specific security scan (semgrep rules) |
 | `dependency-review.yml` | Flags new dependencies with known CVEs or licence restrictions |
-| `node.js.yml` | Build, lint, and test on Node 20 - caller stub; delegates to `node-ci.yml` (synced to all repos) |
+| `node.js.yml` | Build, lint, and test on Node 22 LTS - caller stub; delegates to `node-ci.yml` (synced to all repos) |
 
 > Pre-commit tooling (local linting, formatting, commit-msg hooks) is developer-local and not managed here. See the project [contribution guide](https://github.com/tazama-lf/tazama-documentation) for local setup guidance.
 
@@ -212,7 +212,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `gpg-verify.yml` | Verify GPG signature on commits | `pull_request` | All repos |
 | `milestone.yml` | Close a milestone and trigger `release.yml` | `workflow_dispatch` | All repos |
 | `njsscan.yml` | Node.js security scan (semgrep) | `push`, `pull_request` | All repos |
-| `node-ci.yml` | Reusable: Node 20 CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |\n| `node.js.yml` | Caller stub: delegates Node 20 CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
+| `node-ci.yml` | Reusable: Node 22 LTS CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |\n| `node.js.yml` | Caller stub: delegates Node 22 LTS CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `package-rule.yml` | Reusable: build and push `:latest`/`:X.Y.Z` Docker images for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
 | `library-dependency-rollout.yml` | On rc version merge to `dev` in a library repo, update the exact version pin in every registered consumer's `package.json`, regenerate `package-lock.json`, and open (or update) a `dep/library-dependency-bump → dev` PR | `push: [dev]` (path: `package.json`), `workflow_dispatch` | `PUBLISH_REPOS` only |
@@ -342,11 +342,11 @@ Most workflow files pin external actions to commit SHAs for supply-chain securit
 
 ### Node.js version updates
 
-`node.js.yml` is not synced and must be updated in each repo individually.
+`node-ci.yml` is the single place to update the Node.js version. It is **not synced** to target repos - it stays in this repo and is called at runtime via `@dev` ref by the `node.js.yml` caller stub in every target repo. Bumping the version here takes effect immediately on the next workflow run in all repos without requiring any sync PR.
 
-1. Update the canonical `.github/workflows/node.js.yml` in this repo.
-2. Apply the same change to each repo in `REPOS`, to `frmscoe/workflows`, and its 33 target repos.
-3. Track progress in `update-workflows.md` (private planning doc, not committed to this repo).
+1. Update `node-version:` in all three jobs (`build`, `lint`, `test`) in `.github/workflows/node-ci.yml`.
+2. Update the step names (`Use Node.js XX`) to match.
+3. Open a PR to `dev` in this repo.
 
 ### gh CLI version
 
