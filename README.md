@@ -37,7 +37,7 @@ The following checks run automatically on pull requests across all repo classes.
 | `conventional-commits.yml` | PR title is validated against the [Conventional Commits](https://www.conventionalcommits.org/) specification |
 | `dco-check.yml` | All commits carry a DCO `Signed-off-by` trailer - ⚠️ [known issue #37](https://github.com/tazama-lf/workflows/issues/37) |
 | `gpg-verify.yml` | All commits are GPG-signed |
-| `codacy.yml` | Static analysis via Codacy CLI - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
+| `codacy.yml` | Static analysis via Codacy CLI; SARIF runs merged by `jq` before upload - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
 | `codeql.yml` | GitHub CodeQL SAST security scan |
 | `njsscan.yml` | Node.js-specific security scan (semgrep rules) |
 | `dependency-review.yml` | Flags new dependencies with known CVEs or licence restrictions |
@@ -184,8 +184,8 @@ Changes to this repo propagate to all 32 target repositories. This is the highes
 2. **DevOps** - opens pull request targeting `dev`.
 3. **AUTO** - standard PR check suite fires against this repo.
 4. **Reviewer - MANUAL** - reviews and merges the source PR to `dev` in this repo.
-5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 32 target repos.
-6. **Reviewers in target repos - MANUAL** - merge `sync-workflows-update` PRs in each target repo.
+5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 32 target repos. The commit message and PR title both include `[skip ci]` so that squash-merging the sync PR suppresses all push-triggered workflows (CI, Docker builds) on the resulting commit in the target repo.
+6. **Reviewers in target repos - MANUAL** - review and merge `sync-workflows-update` PRs in each target repo. The `[skip ci]` tag prevents unnecessary workflow runs on merge.
 7. **DevOps - MANUAL** - applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
 8. **AUTO** - once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
 
@@ -243,6 +243,12 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 |------|--------|
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
 | `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
+
+**Additionally distributed (not in `.github/workflows/`):**
+
+| File | Destination in target repo | Reason |
+|------|---------------------------|--------|
+| `config-templates/.codacy.yml` | `.codacy.yml` (repo root) | Standard Codacy engine allowlist for TypeScript/Node.js repos; enables ESLint and Semgrep only, suppressing false positives from Python/Java engines |
 
 **Full `REPOS` list (32 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`.
 
