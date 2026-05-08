@@ -32,6 +32,10 @@
       },
       {
         "org": "tazama-lf",
+        "repo": "frms-coe-startup-lib"
+      },
+      {
+        "org": "tazama-lf",
         "repo": "lumberjack"
       },
       {
@@ -41,6 +45,22 @@
       {
         "org": "tazama-lf",
         "repo": "relay-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service-integration-kafka"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service-integration-nats"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service-integration-rabbitmq"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "relay-service-integration-rest"
       },
       {
         "org": "tazama-lf",
@@ -57,6 +77,10 @@
       {
         "org": "tazama-lf",
         "repo": "rule-studio-example"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "tcs-lib"
       },
       {
         "org": "tazama-lf",
@@ -255,6 +279,10 @@
       {
         "org": "tazama-lf",
         "repo": "admin-service"
+      },
+      {
+        "org": "tazama-lf",
+        "repo": "auth-lib-provider-keycloak"
       },
       {
         "org": "tazama-lf",
