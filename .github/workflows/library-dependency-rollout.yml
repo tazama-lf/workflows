@@ -43,22 +43,6 @@ jobs:
       contents: read
 
     steps:
-      - name: Generate GitHub App token (tazama-lf)
-        id: app_token
-        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e  # v2.0.6
-        with:
-          app-id: ${{ secrets.TAZAMA_BOT_APP_ID }}
-          private-key: ${{ secrets.TAZAMA_BOT_PRIVATE_KEY }}
-          owner: tazama-lf
-
-      - name: Generate GitHub App token (frmscoe)
-        id: app_token_frmscoe
-        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e  # v2.0.6
-        with:
-          app-id: ${{ secrets.TAZAMA_BOT_APP_ID }}
-          private-key: ${{ secrets.TAZAMA_BOT_PRIVATE_KEY }}
-          owner: frmscoe
-
       - name: Checkout library repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
@@ -92,11 +76,30 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set up Git identity
+      - name: Set up Git signing
         if: steps.check_rc.outputs.skip != 'true'
         run: |
-          git config --global user.name 'tazama-lf-ci-bot[bot]'
-          git config --global user.email '282868230+tazama-lf-ci-bot[bot]@users.noreply.github.com'
+          git config --global user.name 'Justus-at-Tazama'
+          git config --global user.email '123470803+Justus-at-Tazama@users.noreply.github.com'
+          git config --global credential.helper store
+          # Configure SSH commit signing so rollout commits show as Verified on GitHub.
+          # SSH_SIGNING_KEY is stored base64-encoded as an org-level secret (all repos).
+          # The corresponding public key must be registered as a Signing Key on the GitHub account
+          # that GH_TOKEN belongs to: Settings -> SSH and GPG keys -> New signing key.
+          if [ -z "${{ secrets.SSH_SIGNING_KEY }}" ]; then
+            echo "::error::SSH_SIGNING_KEY secret is not set. Commits cannot be signed." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_SIGNING_KEY }}" | base64 -d > ~/.ssh/signing_key
+          chmod 600 ~/.ssh/signing_key
+          ssh-keygen -y -f ~/.ssh/signing_key > /dev/null || {
+            echo "::error::SSH_SIGNING_KEY is not a valid SSH private key or is passphrase-protected." >&2
+            exit 1
+          }
+          git config --global gpg.format ssh
+          git config --global user.signingkey ~/.ssh/signing_key
+          git config --global commit.gpgsign true
 
       - name: Set up Node.js
         if: steps.check_rc.outputs.skip != 'true'
@@ -126,8 +129,8 @@ jobs:
       - name: Roll out to consumers
         if: steps.check_rc.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          GH_TOKEN_FRMSCOE: ${{ steps.app_token_frmscoe.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN_FRMSCOE: ${{ secrets.GH_TOKEN }}
           GH_TOKEN_LIB: ${{ secrets.GH_TOKEN_LIB }}
           PKG_NAME: ${{ steps.lib_pkg.outputs.name }}
           PKG_VERSION: ${{ steps.lib_pkg.outputs.version }}
@@ -136,7 +139,7 @@ jobs:
           set -euo pipefail
 
           BUMP_BRANCH="dep/library-dependency-bump"
-          SIGNED_OFF_BY="Signed-off-by: tazama-lf-ci-bot[bot] <282868230+tazama-lf-ci-bot[bot]@users.noreply.github.com>"
+          SIGNED_OFF_BY="Signed-off-by: Justus-at-Tazama <123470803+Justus-at-Tazama@users.noreply.github.com>"
           WORK_DIR=$(mktemp -d)
 
           # Read consumers for this library from the catalog
@@ -318,7 +321,7 @@ jobs:
                 echo ""
                 echo "> \`package-lock.json\` has been regenerated. Run \`npm install\` locally to sync your working copy after merging."
                 echo ""
-                echo "Signed-off-by: tazama-lf-ci-bot[bot] <282868230+tazama-lf-ci-bot[bot]@users.noreply.github.com>"
+                echo "Signed-off-by: Justus-at-Tazama <123470803+Justus-at-Tazama@users.noreply.github.com>"
               } > "$PR_BODY_FILE"
 
               # Create PR
