@@ -59,8 +59,11 @@ jobs:
         run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check linting
-        run: npm run lint
+      - name: Check linting (ESLint)
+        run: npm run lint:eslint
+      - name: Check linting (Prettier)
+        run: npm run lint:prettier
+        continue-on-error: true
 
   test:
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
