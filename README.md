@@ -37,7 +37,7 @@ The following checks run automatically on pull requests across all repo classes.
 | `conventional-commits.yml` | PR title is validated against the [Conventional Commits](https://www.conventionalcommits.org/) specification |
 | `dco-check.yml` | All commits carry a DCO `Signed-off-by` trailer - ⚠️ [known issue #37](https://github.com/tazama-lf/workflows/issues/37) |
 | `gpg-verify.yml` | All commits are GPG-signed |
-| `codacy.yml` | Static analysis via Codacy CLI; SARIF runs merged by `jq` before upload - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
+| `codacy.yml` | Caller stub; delegates to `codacy-ci.yml` - static analysis via Codacy CLI (ESLint, Semgrep); Docker tools disabled; SARIF runs merged by `jq` before upload - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) |
 | `codeql.yml` | GitHub CodeQL SAST security scan |
 | `njsscan.yml` | Node.js-specific security scan (semgrep rules) |
 | `dependency-review.yml` | Flags new dependencies with known CVEs or licence restrictions |
