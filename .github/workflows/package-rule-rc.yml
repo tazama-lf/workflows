@@ -154,7 +154,7 @@ jobs:
           # Without this, `npm ci` in the Docker build follows the old lock file
           # and installs the wrong rule module regardless of package.json.
           rm -f package-lock.json
-          npm install --package-lock-only
+          npm install --package-lock-only --ignore-scripts
           # Verify the lock file was regenerated with the correct rule module
           RULE_NUM="${{ inputs.rule_number }}"
           RULE_ORG="${{ inputs.rule_org }}"
