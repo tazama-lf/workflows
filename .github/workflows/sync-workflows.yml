@@ -51,6 +51,8 @@ jobs:
           git config --global gpg.format ssh
           git config --global user.signingkey ~/.ssh/signing_key
           git config --global commit.gpgsign true
+          echo "SSH signing public key (register on GitHub account as Signing Key if commits show Unverified):"
+          ssh-keygen -y -f ~/.ssh/signing_key
 
       - name: Get actor details  # Step to get the triggering actor's details for the Signed-off-by line
         id: pr_author
@@ -158,6 +160,7 @@ jobs:
           CREATED_MAIN_PRS=()
           EXISTING_MAIN_PRS=()
           NO_CHANGE_REPOS=()
+          NO_CHANGE_MAIN_REPOS=()
 
           # Build the temp-workflows bundle once, outside the repo loop
           mkdir -p temp-workflows
@@ -278,9 +281,6 @@ jobs:
             # Remove legacy dco-check.yaml (wrong extension - canonical is dco-check.yml)
             rm -f .github/workflows/dco-check.yaml
             git add -A .github/workflows/ .codacy.yml
-            git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
-            git push origin sync-workflows-update || git push origin sync-workflows-update --force
-
             # Create the PR with reviewers
             IFS=',' read -ra REVIEWERS <<< "${PR_REVIEWERS}"
             REVIEWERS_ARGS=""
@@ -289,16 +289,19 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null || true)
-            if [ -n "$PR_URL" ]; then
-              CREATED_PRS+=("$ORG/$repo $PR_URL")
-            else
-              # PR already exists - try to update and find its URL
-              gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
-              EXISTING_URL=$(gh pr view sync-workflows-update --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
-              if [ -n "$EXISTING_URL" ]; then
-                EXISTING_PRS+=("$ORG/$repo $EXISTING_URL")
+            if git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}"; then
+              git push origin sync-workflows-update || git push origin sync-workflows-update --force
+              if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null; then
+                PR_URL=$(gh pr view sync-workflows-update --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+                [ -n "$PR_URL" ] && CREATED_PRS+=("$ORG/$repo $PR_URL") || true
+              else
+                gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
+                EXISTING_URL=$(gh pr view sync-workflows-update --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+                [ -n "$EXISTING_URL" ] && EXISTING_PRS+=("$ORG/$repo $EXISTING_URL") || true
               fi
+            else
+              echo "No changes to sync for $ORG/$repo (dev already up to date)"
+              NO_CHANGE_REPOS+=("$ORG/$repo")
             fi
 
             # --- Main branch sync ---
@@ -370,18 +373,19 @@ jobs:
               cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
               rm -f .github/workflows/dco-check.yaml
               git add -A .github/workflows/ .codacy.yml
-              git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
-              git push origin sync-workflows-update-main || git push origin sync-workflows-update-main --force
-
-              MAIN_PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null || true)
-              if [ -n "$MAIN_PR_URL" ]; then
-                CREATED_MAIN_PRS+=("$ORG/$repo $MAIN_PR_URL")
-              else
-                gh pr edit sync-workflows-update-main --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
-                EXISTING_MAIN_URL=$(gh pr view sync-workflows-update-main --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
-                if [ -n "$EXISTING_MAIN_URL" ]; then
-                  EXISTING_MAIN_PRS+=("$ORG/$repo $EXISTING_MAIN_URL")
+              if git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}"; then
+                git push origin sync-workflows-update-main || git push origin sync-workflows-update-main --force
+                if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null; then
+                  MAIN_PR_URL=$(gh pr view sync-workflows-update-main --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+                  [ -n "$MAIN_PR_URL" ] && CREATED_MAIN_PRS+=("$ORG/$repo $MAIN_PR_URL") || true
+                else
+                  gh pr edit sync-workflows-update-main --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
+                  EXISTING_MAIN_URL=$(gh pr view sync-workflows-update-main --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+                  [ -n "$EXISTING_MAIN_URL" ] && EXISTING_MAIN_PRS+=("$ORG/$repo $EXISTING_MAIN_URL") || true
                 fi
+              else
+                echo "No changes to sync for $ORG/$repo (main already up to date)"
+                NO_CHANGE_MAIN_REPOS+=("$ORG/$repo")
               fi
             fi
 
@@ -412,8 +416,16 @@ jobs:
               done
               echo ""
             fi
-            if [ ${#CREATED_PRS[@]} -eq 0 ] && [ ${#EXISTING_PRS[@]} -eq 0 ]; then
-              echo "_No dev PRs were created or updated — all repos were already up to date._"
+            if [ ${#NO_CHANGE_REPOS[@]} -gt 0 ]; then
+              echo "#### Repos already up to date (${#NO_CHANGE_REPOS[@]})"
+              echo ""
+              for entry in "${NO_CHANGE_REPOS[@]}"; do
+                echo "- $entry"
+              done
+              echo ""
+            fi
+            if [ ${#CREATED_PRS[@]} -eq 0 ] && [ ${#EXISTING_PRS[@]} -eq 0 ] && [ ${#NO_CHANGE_REPOS[@]} -eq 0 ]; then
+              echo "_No dev PRs were created or updated._"
               echo ""
             fi
             echo "### PRs to main"
@@ -436,7 +448,15 @@ jobs:
               done
               echo ""
             fi
-            if [ ${#CREATED_MAIN_PRS[@]} -eq 0 ] && [ ${#EXISTING_MAIN_PRS[@]} -eq 0 ]; then
+            if [ ${#NO_CHANGE_MAIN_REPOS[@]} -gt 0 ]; then
+              echo "#### Repos already up to date (${#NO_CHANGE_MAIN_REPOS[@]})"
+              echo ""
+              for entry in "${NO_CHANGE_MAIN_REPOS[@]}"; do
+                echo "- $entry"
+              done
+              echo ""
+            fi
+            if [ ${#CREATED_MAIN_PRS[@]} -eq 0 ] && [ ${#EXISTING_MAIN_PRS[@]} -eq 0 ] && [ ${#NO_CHANGE_MAIN_REPOS[@]} -eq 0 ]; then
               echo "_No main PRs were created or updated._"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
