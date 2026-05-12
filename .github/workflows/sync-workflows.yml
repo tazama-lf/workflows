@@ -289,7 +289,7 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null)
+            PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null || true)
             if [ -n "$PR_URL" ]; then
               CREATED_PRS+=("$ORG/$repo $PR_URL")
             else
@@ -373,7 +373,7 @@ jobs:
               git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
               git push origin sync-workflows-update-main || git push origin sync-workflows-update-main --force
 
-              MAIN_PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null)
+              MAIN_PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null || true)
               if [ -n "$MAIN_PR_URL" ]; then
                 CREATED_MAIN_PRS+=("$ORG/$repo $MAIN_PR_URL")
               else
