@@ -310,9 +310,8 @@ jobs:
               echo "### New PRs created (${#CREATED_PRS[@]})"
               echo ""
               for entry in "${CREATED_PRS[@]}"; do
-                repo_name="${entry%% *}"
                 pr_url="${entry#* }"
-                echo "- [$repo_name]($pr_url)"
+                echo "- $pr_url"
               done
               echo ""
             fi
@@ -320,9 +319,8 @@ jobs:
               echo "### Existing PRs updated (${#EXISTING_PRS[@]})"
               echo ""
               for entry in "${EXISTING_PRS[@]}"; do
-                repo_name="${entry%% *}"
                 pr_url="${entry#* }"
-                echo "- [$repo_name]($pr_url)"
+                echo "- $pr_url"
               done
               echo ""
             fi
