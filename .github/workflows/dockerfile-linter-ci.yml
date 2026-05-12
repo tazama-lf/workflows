@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Reusable Hadolint Dockerfile linter workflow.
+# Called by consumer repos via a thin stub (dockerfile-linter.yml) that uses this workflow.
+# Logic changes belong here - do not add steps to the stub.
+# For more information see: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
+
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
+name: Hadolint (reusable)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  hadolint:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
+    name: Run hadolint scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Run hadolint
+        id: hadolint
+        if: hashFiles('Dockerfile') != ''
+        uses: hadolint/hadolint-action@f988afea3da57ee48710a9795b6bb677cc901183
+        with:
+          dockerfile: ./Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+          no-fail: true
+      - name: Upload analysis results to GitHub
+        if: steps.hadolint.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@5c8a8a642e79153f5d047b10ec1cba1d1cc65699  # v3
+        with:
+          sarif_file: hadolint-results.sarif
+          wait-for-processing: true

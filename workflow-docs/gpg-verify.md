@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Verifies that every commit in a pull request has a valid GPG signature using the GitHub REST API, ensuring that only verified commits can be merged.
+Caller stub that delegates commit signature verification to the centralised reusable workflow [`gpg-verify-ci.yml`](gpg-verify-ci.md). Contains only the `pull_request` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,30 +16,36 @@ Verifies that every commit in a pull request has a valid GPG signature using the
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~20–30 s |
-| Concurrency | none |
-| Permissions | default |
+All execution context is defined in [`gpg-verify-ci.yml`](gpg-verify-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `gpg-verify` - GPG Verify
+### `gpg-verify`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - full history fetch (`fetch-depth: 0`)
-2. `Set up environment variables` - captures `PR_HEAD_REF`, `PR_BASE_REF`, `GITHUB_TOKEN`, `GITHUB_REPOSITORY`
-3. `Check GPG verification status` - iterates commits via `git log origin/${PR_BASE_REF}..origin/${PR_HEAD_REF}`; queries `/repos/:repo/commits/:sha` for each and checks `.commit.verification.verified`; fails if any commit is unverified
+```yaml
+uses: tazama-lf/workflows/.github/workflows/gpg-verify-ci.yml@dev
+secrets: inherit
+```
+
+See [`gpg-verify-ci.yml` documentation](gpg-verify-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None (uses auto-provided `GITHUB_TOKEN`).
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only `GITHUB_TOKEN`.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
 
 ---
 
@@ -49,26 +55,4 @@ None (uses auto-provided `GITHUB_TOKEN`).
 |-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-
----
-
-## Known Limitations / Notes
-
-- `dependabot[bot]`, `dependabot-preview[bot]`, and `github-actions[bot]` actors are excluded - these automated actors do not have GPG keys and will never produce signed commits.
-- An empty commit range (e.g. no new commits on the head branch) is handled gracefully - the step exits 0 without failing.
-- GPG verification is checked via the GitHub commit API (`.commit.verification.verified`), which uses the committer's GitHub-linked public key. Local GPG keyrings on the runner are not required.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.

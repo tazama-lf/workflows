@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Validates the PR title against the Conventional Commits specification and automatically applies a corresponding GitHub label (e.g. `bug`, `enhancement`, `CI/CD`) to the PR.
+Caller stub that delegates PR title validation logic to the centralised reusable workflow [`conventional-commits-ci.yml`](conventional-commits-ci.md). Contains only the `pull_request` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,29 +16,38 @@ Validates the PR title against the Conventional Commits specification and automa
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~20 s |
-| Concurrency | none |
-| Permissions | default (`GITHUB_TOKEN`) |
+All execution context is defined in [`conventional-commits-ci.yml`](conventional-commits-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `validate-pr-title` - PR Conventional Commit Validation
+### `validate-pr-title`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - checks out source
-2. `ytanikin/PRConventionalCommits@1.1.0` - validates title; accepted types: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `feat!`; applies label on match
+```yaml
+uses: tazama-lf/workflows/.github/workflows/conventional-commits-ci.yml@dev
+secrets: inherit
+```
+
+See [`conventional-commits-ci.yml` documentation](conventional-commits-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None (uses auto-provided `GITHUB_TOKEN`).
+All secrets are passed through via `secrets: inherit`. See [`conventional-commits-ci.yml`](conventional-commits-ci.md) for the list.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
+| `pull-requests` | `write` |
+| `issues` | `write` |
 
 ---
 
@@ -48,16 +57,7 @@ None (uses auto-provided `GITHUB_TOKEN`).
 |-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-| `ytanikin/PRConventionalCommits` | tag ref `1.1.0` | - |
-
----
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.
 
 ## Known Limitations / Notes
 

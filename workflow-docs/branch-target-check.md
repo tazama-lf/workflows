@@ -1,8 +1,8 @@
-# `branch-target-check.yml`
+﻿# `branch-target-check.yml`
 
 ## Purpose
 
-Enforces the feature-branch → dev → main development workflow by failing any PR to `main` that does not originate from `dev` or a `release/v<N>.*` branch, saving developers from confusing branch-protection errors.
+Caller stub that delegates branch target enforcement logic to the centralised reusable workflow [`branch-target-check-ci.yml`](branch-target-check-ci.md). Contains only the `pull_request: branches: [main]` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,55 +16,43 @@ Enforces the feature-branch → dev → main development workflow by failing any
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~15 s |
-| Concurrency | none |
-| Permissions | `contents: read` |
+All execution context is defined in [`branch-target-check-ci.yml`](branch-target-check-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `check-source-branch` - verify PR source branch
+### `check-source-branch`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `Verify PR source branch is dev or release/v<N>.*` - shell check; exits `1` with actionable message (including `gh pr edit --base dev` hint) if source branch is not `dev` or `release/v[0-9]*`
+```yaml
+uses: tazama-lf/workflows/.github/workflows/branch-target-check-ci.yml@dev
+secrets: inherit
+```
+
+See [`branch-target-check-ci.yml` documentation](branch-target-check-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only shell logic.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
 
 ---
 
 ## Sync Distribution
 
 | Group | Behaviour |
-|-------|-----------|
+|-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-None - single run step only.
-
----
-
-## Known Limitations / Notes
-
-- `dependabot[bot]` and `dependabot-preview[bot]` actors are excluded from the check.
-- Only guards `main` as target; no equivalent check for PRs to `dev` (any source branch is permitted).
-- Source branch value is passed via `env:` rather than inline `${{ github.head_ref }}` to prevent header injection.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.

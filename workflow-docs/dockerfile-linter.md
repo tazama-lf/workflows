@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lints `Dockerfile` using Hadolint, a Haskell-based Dockerfile linter that enforces Docker best practices, and uploads SARIF results to GitHub Advanced Security.
+Caller stub that delegates Hadolint Dockerfile linting to the centralised reusable workflow [`dockerfile-linter-ci.yml`](dockerfile-linter-ci.md). Contains only the push/PR/schedule triggers and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -18,30 +18,38 @@ Lints `Dockerfile` using Hadolint, a Haskell-based Dockerfile linter that enforc
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~30 s |
-| Concurrency | none |
-| Permissions | `contents: read`, `security-events: write`, `actions: read` |
+All execution context is defined in [`dockerfile-linter-ci.yml`](dockerfile-linter-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `hadolint` - Run hadolint scanning
+### `dockerfile-linter`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - checks out source
-2. `hadolint/hadolint-action@f988afea3da57ee48710a9795b6bb677cc901183` - lints `./Dockerfile`; outputs `hadolint-results.sarif`; `no-fail: true` allows SARIF generation even on findings
-3. `github/codeql-action/upload-sarif@v3` - uploads SARIF to GitHub code scanning
+```yaml
+uses: tazama-lf/workflows/.github/workflows/dockerfile-linter-ci.yml@dev
+secrets: inherit
+```
+
+See [`dockerfile-linter-ci.yml` documentation](dockerfile-linter-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only `GITHUB_TOKEN`.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
+| `security-events` | `write` |
+| `actions` | `read` |
 
 ---
 
@@ -51,27 +59,4 @@ None.
 |-------|----------|
 | All `REPOS` | Receives this file - a no-op if the repo has no `Dockerfile` |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-| `hadolint/hadolint-action` | `f988afea3da57ee48710a9795b6bb677cc901183` | - |
-| `github/codeql-action/upload-sarif` | tag ref `v3` | - |
-
----
-
-## Known Limitations / Notes
-
-- `dependabot[bot]` actors are excluded.
-- The workflow always targets `./Dockerfile` at the repo root; repos with Dockerfiles at other paths will not be linted without a local override.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.
