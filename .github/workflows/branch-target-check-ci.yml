@@ -24,7 +24,7 @@ jobs:
         env:
           SOURCE: ${{ github.head_ref }}
         run: |
-          if [[ "$SOURCE" == "dev" || "$SOURCE" == release/v[0-9]* ]]; then
+          if [[ "$SOURCE" == "dev" || "$SOURCE" == release/v[0-9]* || "$SOURCE" == "sync-workflows-update-main" ]]; then
             echo "✅ Source branch '$SOURCE' is a valid base for a PR to main."
           else
             echo "❌ PRs to main must come from 'dev' or a 'release/v<N>.*' branch (e.g. release/v1.2)."
@@ -33,6 +33,7 @@ jobs:
             echo "   If you are working on a feature or fix, please retarget this PR to 'dev':"
             echo "     gh pr edit --base dev"
             echo ""
-            echo "   Only 'dev' → main (via release-train.yml) and 'release/v<N>.*' → main merges are permitted."
+            echo "   Only 'dev' → main (via release-train.yml), 'release/v<N>.*' → main, and"
+            echo "   'sync-workflows-update-main' → main (automated workflow sync) merges are permitted."
             exit 1
           fi
