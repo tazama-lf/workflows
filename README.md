@@ -222,8 +222,8 @@ Changes to this repo propagate to all 32 target repositories. This is the highes
 2. **DevOps** - opens pull request targeting `dev`.
 3. **AUTO** - standard PR check suite fires against this repo.
 4. **Reviewer - MANUAL** - reviews and merges the source PR to `dev` in this repo.
-5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs in all 32 target repos. The commit message and PR title both include `[skip ci]` so that squash-merging the sync PR suppresses all push-triggered workflows (CI, Docker builds) on the resulting commit in the target repo.
-6. **Reviewers in target repos - MANUAL** - review and merge `sync-workflows-update` PRs in each target repo. The `[skip ci]` tag prevents unnecessary workflow runs on merge.
+5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs (targeting `dev`) and `sync-workflows-update-main` PRs (targeting `main`) in all 32 target repos. Both PRs carry `[skip ci]` in the commit message and PR title so that squash-merging suppresses all push-triggered workflows (CI, Docker builds) on the resulting commit in the target repo.
+6. **Reviewers in target repos - MANUAL** - review and merge both the `sync-workflows-update → dev` and `sync-workflows-update-main → main` PRs in each target repo. Keeping `main` current ensures scheduled workflows (`scorecard.yml`, `codeql.yml`, `njsscan.yml`, etc.) always run against current stub files - GitHub's scheduler reads scheduled workflows from the default branch only.
 7. **DevOps - MANUAL** - applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
 8. **AUTO** - once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
 
@@ -311,11 +311,27 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 |------|---------------------------|--------|
 | `config-templates/.codacy.yml` | `.codacy.yml` (repo root) | Standard Codacy engine allowlist for TypeScript/Node.js repos; enables ESLint and Semgrep only, suppressing false positives from Python/Java engines |
 
+**Workflow branch activation**
+
+Not all workflows are equally active on `dev` and `main`. The table below categorizes installed workflows by which branch they perform meaningful work on in a typical target repo. This is the primary reason the sync targets both branches.
+
+| Category | Workflows | Branch |
+|----------|-----------|--------|
+| **Scheduled security scans** - GitHub's scheduler reads from the default branch; stale `main` = broken or silently skipped scans | `scorecard.yml`, `codeql.yml` (schedule), `njsscan.yml` (schedule), `dockerfile-linter.yml` (schedule) | `main` required; also run on `dev` push |
+| **Release artifact builds** - fire on push to `main` only | `dockerhub-image-build.yml`, `publish.yml`, `sbom.yml` | `main` only |
+| **RC/dev artifact builds** - fire on push to `dev` only | `dockerhub-image-build-rc.yml`, `library-dependency-rollout.yml` | `dev` only |
+| **Push CI** - fire on push to both branches | `node.js.yml`, `dockerfile-linter.yml` (push trigger), `codeql.yml` (push trigger), `njsscan.yml` (push trigger) | Both |
+| **PR gate checks** - fire on pull request events only; physical branch location does not matter | `branch-target-check.yml`, `conventional-commits.yml`, `dco-check.yml`, `dependency-review.yml`, `encoding-check.yml`, `gpg-verify.yml`, `codacy.yml` | PR only |
+
 **Full `REPOS` list (32 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
 > ⚠️ **`sync-workflows-update` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` in every target repo. Do not use this name for regular development contributions - the sync workflow will delete it and recreate it fresh from `dev` on every run. If you have an open `sync-workflows-update` branch in a target repo, be aware it will be force-replaced the next time the workflow runs.
+
+> ⚠️ **`sync-workflows-update-main` is a reserved branch name.** This branch is created and managed by `sync-workflows.yml` alongside `sync-workflows-update`. It is always cut from `main` and its PR targets `main`. Do not use this name for regular development contributions - it will be force-replaced on every sync run.
+
+> **Why sync targets both `dev` and `main`:** GitHub's job scheduler always reads scheduled workflow definitions from the repository's default branch (`main`). If `main` is stale, scheduled scans like `scorecard.yml`, `codeql.yml`, and `njsscan.yml` run against outdated or missing stub files. Syncing to `main` ensures scheduled workflows always have current definitions regardless of what triggered the run.
 
 > ⚠️ **`dep/library-dependency-bump` is a reserved branch name.** This branch is created and managed by `library-dependency-rollout.yml` in every consumer repo. Do not use this name for regular development contributions. Multiple library bumps coalesce onto this branch - the workflow pushes new commits onto an existing branch rather than creating a new one.
 

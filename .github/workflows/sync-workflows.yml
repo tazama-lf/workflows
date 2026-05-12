@@ -155,6 +155,8 @@ jobs:
           # Accumulate PR results for the job summary
           CREATED_PRS=()
           EXISTING_PRS=()
+          CREATED_MAIN_PRS=()
+          EXISTING_MAIN_PRS=()
           NO_CHANGE_REPOS=()
 
           # Build the temp-workflows bundle once, outside the repo loop
@@ -299,6 +301,90 @@ jobs:
               fi
             fi
 
+            # --- Main branch sync ---
+            # Syncs the same workflow files to main so that scheduled workflows (scorecard, codeql,
+            # njsscan, etc.) always find current stub files on the default (release) branch.
+            # GitHub's scheduler always reads scheduled workflows from the repository's default branch.
+            # RESERVED: sync-workflows-update-main is managed by this workflow - do not use it for regular development contributions.
+            if git ls-remote --heads origin main | grep -q main; then
+              if git ls-remote --heads origin sync-workflows-update-main | grep -q sync-workflows-update-main; then
+                git push origin --delete sync-workflows-update-main || true
+              fi
+              git fetch origin main
+              git checkout -B main origin/main
+              git checkout -b sync-workflows-update-main
+              mkdir -p .github/workflows
+              for file in ../temp-workflows/*; do
+                filename=$(basename "$file")
+                if in_list "$repo" "$SPECIFIC_REPOS" && [[ " ${SPECIFIC_FILES} " =~ " ${filename} " ]]; then
+                  continue
+                fi
+                if [[ "${filename}" == "publish.yml" || "${filename}" == "version-check.yml" || "${filename}" == "release-train.yml" || "${filename}" == "library-dependency-rollout.yml" ]] && ! in_list "$repo" "$PUBLISH_REPOS"; then
+                  continue
+                fi
+                if in_list "$repo" "$RULE_REPOS" && [[ "${filename}" == package-rule*.yml ]]; then
+                  continue
+                fi
+                if [[ "${filename}" == "scorecard.yml" ]] && in_list "$repo" "$PUBLISH_REPOS"; then
+                  continue
+                fi
+                cp -r "$file" ".github/workflows/"
+              done
+              if in_list "$repo" "$RULE_REPOS"; then
+                RULE_NUM="${repo#rule-}"
+                printf '%s\n' \
+                  '# SPDX-License-Identifier: Apache-2.0' \
+                  '# This file is managed centrally - do not edit manually.' \
+                  '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                  'on:' \
+                  '  push:' \
+                  '    branches: [dev]' \
+                  '  repository_dispatch:' \
+                  '    types: [rule-executer-update]' \
+                  '  workflow_dispatch:' \
+                  'jobs:' \
+                  '  build:' \
+                  "    uses: tazama-lf/workflows/.github/workflows/package-rule-rc.yml@dev" \
+                  '    with:' \
+                  "      rule_number: \"${RULE_NUM}\"" \
+                  '      rule_org: "tazama-lf"' \
+                  '    secrets: inherit' \
+                  > ".github/workflows/package-rule-rc.yml"
+                printf '%s\n' \
+                  '# SPDX-License-Identifier: Apache-2.0' \
+                  '# This file is managed centrally - do not edit manually.' \
+                  '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                  'on:' \
+                  '  push:' \
+                  '    branches: [main]' \
+                  '  workflow_dispatch:' \
+                  'jobs:' \
+                  '  build:' \
+                  "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@main" \
+                  '    with:' \
+                  "      rule_number: \"${RULE_NUM}\"" \
+                  '      rule_org: "tazama-lf"' \
+                  '    secrets: inherit' \
+                  > ".github/workflows/package-rule.yml"
+              fi
+              cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
+              rm -f .github/workflows/dco-check.yaml
+              git add -A .github/workflows/ .codacy.yml
+              git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}" || echo "No changes to commit"
+              git push origin sync-workflows-update-main || git push origin sync-workflows-update-main --force
+
+              MAIN_PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null)
+              if [ -n "$MAIN_PR_URL" ]; then
+                CREATED_MAIN_PRS+=("$ORG/$repo $MAIN_PR_URL")
+              else
+                gh pr edit sync-workflows-update-main --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
+                EXISTING_MAIN_URL=$(gh pr view sync-workflows-update-main --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+                if [ -n "$EXISTING_MAIN_URL" ]; then
+                  EXISTING_MAIN_PRS+=("$ORG/$repo $EXISTING_MAIN_URL")
+                fi
+              fi
+            fi
+
             cd ..
           done
 
@@ -306,8 +392,10 @@ jobs:
           {
             echo "## Sync Workflows — PR Summary"
             echo ""
+            echo "### PRs to dev"
+            echo ""
             if [ ${#CREATED_PRS[@]} -gt 0 ]; then
-              echo "### New PRs created (${#CREATED_PRS[@]})"
+              echo "#### New PRs created (${#CREATED_PRS[@]})"
               echo ""
               for entry in "${CREATED_PRS[@]}"; do
                 pr_url="${entry#* }"
@@ -316,7 +404,7 @@ jobs:
               echo ""
             fi
             if [ ${#EXISTING_PRS[@]} -gt 0 ]; then
-              echo "### Existing PRs updated (${#EXISTING_PRS[@]})"
+              echo "#### Existing PRs updated (${#EXISTING_PRS[@]})"
               echo ""
               for entry in "${EXISTING_PRS[@]}"; do
                 pr_url="${entry#* }"
@@ -325,6 +413,30 @@ jobs:
               echo ""
             fi
             if [ ${#CREATED_PRS[@]} -eq 0 ] && [ ${#EXISTING_PRS[@]} -eq 0 ]; then
-              echo "_No PRs were created or updated — all repos were already up to date._"
+              echo "_No dev PRs were created or updated — all repos were already up to date._"
+              echo ""
+            fi
+            echo "### PRs to main"
+            echo ""
+            if [ ${#CREATED_MAIN_PRS[@]} -gt 0 ]; then
+              echo "#### New PRs created (${#CREATED_MAIN_PRS[@]})"
+              echo ""
+              for entry in "${CREATED_MAIN_PRS[@]}"; do
+                pr_url="${entry#* }"
+                echo "- [$pr_url]($pr_url)"
+              done
+              echo ""
+            fi
+            if [ ${#EXISTING_MAIN_PRS[@]} -gt 0 ]; then
+              echo "#### Existing PRs updated (${#EXISTING_MAIN_PRS[@]})"
+              echo ""
+              for entry in "${EXISTING_MAIN_PRS[@]}"; do
+                pr_url="${entry#* }"
+                echo "- [$pr_url]($pr_url)"
+              done
+              echo ""
+            fi
+            if [ ${#CREATED_MAIN_PRS[@]} -eq 0 ] && [ ${#EXISTING_MAIN_PRS[@]} -eq 0 ]; then
+              echo "_No main PRs were created or updated._"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
