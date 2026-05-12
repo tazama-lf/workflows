@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Checks that every commit in a pull request includes a `Signed-off-by:` line, enforcing Developer Certificate of Origin (DCO) compliance across all contributions.
+Caller stub that delegates DCO sign-off enforcement logic to the centralised reusable workflow [`dco-check-ci.yml`](dco-check-ci.md). Contains only the `pull_request` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,30 +16,36 @@ Checks that every commit in a pull request includes a `Signed-off-by:` line, enf
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~20 s |
-| Concurrency | none |
-| Permissions | default |
+All execution context is defined in [`dco-check-ci.yml`](dco-check-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `dco` - DCO
+### `dco`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - full history fetch (`fetch-depth: 0`)
-2. `Set up environment variables` - captures `BASE_BRANCH` and `HEAD_BRANCH` from PR context
-3. `Check for DCO Sign-off` - iterates commits between head and base; fails listing non-compliant SHAs
+```yaml
+uses: tazama-lf/workflows/.github/workflows/dco-check-ci.yml@dev
+secrets: inherit
+```
+
+See [`dco-check-ci.yml` documentation](dco-check-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only `GITHUB_TOKEN`.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
 
 ---
 
@@ -49,25 +55,4 @@ None.
 |-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-
----
-
-## Known Limitations / Notes
-
-- `dependabot[bot]` actors are excluded.
-- The `git log` range uses `origin/HEAD_BRANCH..origin/BASE_BRANCH`, which gives commits present in the base but absent from the head - the reverse of what a DCO check requires. The correct range is `origin/BASE_BRANCH..origin/HEAD_BRANCH`. This is a latent bug; the check may pass silently on PRs that contain unsigned commits.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.

@@ -1,8 +1,8 @@
-# `sbom.yml`
+﻿# `sbom.yml`
 
 ## Purpose
 
-Generates a Software Bill of Materials (SBOM) for the Docker image using Anchore Syft and uploads the results to the GitHub Dependency Submission API, enabling dependency tracking and vulnerability alerting in the GitHub Security tab.
+Caller stub that delegates Anchore Syft SBOM generation to the centralised reusable workflow [`sbom-ci.yml`](sbom-ci.md). Contains only the `push: main` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,59 +16,50 @@ Generates a Software Bill of Materials (SBOM) for the Docker image using Anchore
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~3–5 min |
-| Concurrency | none |
-| Permissions | `contents: write` |
+All execution context is defined in [`sbom-ci.yml`](sbom-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `Anchore-Build-Scan`
+### `sbom`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - checks out source
-2. `docker build . --file Dockerfile --tag localbuild/testimage:latest` - builds the Docker image locally
-3. `anchore/sbom-action@bb716408e75840bbb01e839347cd213767269d4a` - scans the image; outputs `image.spdx.json` artifact; submits dependency snapshot to GitHub via Dependency Submission API
+```yaml
+uses: tazama-lf/workflows/.github/workflows/sbom-ci.yml@dev
+secrets: inherit
+```
+
+See [`sbom-ci.yml` documentation](sbom-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+All secrets are passed through via `secrets: inherit`. `sbom-ci.yml` requires `GH_TOKEN_LIB` for Docker build authentication in repos that pull private npm packages.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `write` |
+| `actions` | `read` |
 
 ---
 
 ## Sync Distribution
 
 | Group | Behaviour |
-|-------|-----------|
-| All `REPOS` | Receives this file |
+|-------|----------|
+| All `REPOS` | Receives this file - a no-op if the repo has no `Dockerfile` |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|--------------|
-| `actions/checkout` | tag ref `v4` | - |
-| `anchore/sbom-action` | `bb716408e75840bbb01e839347cd213767269d4a` | - |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.
 
 ---
 
 ## Known Limitations / Notes
 
-- `dependabot[bot]` actors are excluded.
-- Synced to all repos including library repos that have no `Dockerfile`; the `docker build` step will fail in those repos. Consider excluding library repos (`PUBLISH_REPOS`) from receiving this file - tracked in tazama-lf/workflows#35.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+- Synced to all repos including library repos that have no `Dockerfile`; both steps guarded by `hashFiles('Dockerfile') != ''` so they are skipped cleanly. Coverage for multi-image repos is tracked in [#81](https://github.com/tazama-lf/workflows/issues/81).

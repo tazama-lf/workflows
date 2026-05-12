@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Runs the njsscan (nodejsscan) static security scanner against the Node.js codebase to identify insecure code patterns, and uploads results as SARIF to GitHub Advanced Security.
+Caller stub that delegates njsscan security scanning to the centralised reusable workflow [`njsscan-ci.yml`](njsscan-ci.md). Contains only the push/PR/schedule triggers and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -18,30 +18,38 @@ Runs the njsscan (nodejsscan) static security scanner against the Node.js codeba
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~1–2 min |
-| Concurrency | none |
-| Permissions | `contents: read`, `security-events: write`, `actions: read` |
+All execution context is defined in [`njsscan-ci.yml`](njsscan-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `njsscan` - njsscan code scanning
+### `njsscan`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - checks out source
-2. `ajinabraham/njsscan-action@d58d8b2f26322cd35a9efb8003baac517f226d81` - scans `.`; outputs `results.sarif`; `|| true` ensures SARIF is always generated even when issues are found
-3. `github/codeql-action/upload-sarif@v3` - uploads `results.sarif`
+```yaml
+uses: tazama-lf/workflows/.github/workflows/njsscan-ci.yml@dev
+secrets: inherit
+```
+
+See [`njsscan-ci.yml` documentation](njsscan-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only `GITHUB_TOKEN`.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
+| `security-events` | `write` |
+| `actions` | `read` |
 
 ---
 
@@ -51,26 +59,4 @@ None.
 |-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-| `ajinabraham/njsscan-action` | `d58d8b2f26322cd35a9efb8003baac517f226d81` | - |
-| `github/codeql-action/upload-sarif` | tag ref `v3` | - |
-
----
-
-## Known Limitations / Notes
-
-- `dependabot[bot]` actors are excluded.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.

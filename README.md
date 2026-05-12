@@ -197,21 +197,31 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 | Workflow file | Purpose | Trigger (in target repo) | Synced to |
 |--------------|---------|--------------------------|-----------|
-| `branch-target-check.yml` | Enforce `dev` (or `main` for `release/v*`) as PR target | `pull_request` | All repos |
-| `codacy.yml` | Codacy static analysis | `push`, `pull_request` | All repos |
-| `codeql.yml` | GitHub CodeQL SAST | `push: [dev,main]`, `pull_request: [dev,main]`, schedule | All repos |
-| `conventional-commits.yml` | Validate Conventional Commits spec | `pull_request` | All repos |
-| `dco-check.yml` | Verify DCO Signed-off-by on commits | `pull_request` | All repos |
-| `encoding-check.yml` | Fail a PR if any changed file is UTF-16 or UTF-8 BOM encoded | `pull_request` | All repos |
-| `dependency-review.yml` | Flag CVEs and licence issues in new deps | `pull_request` | All repos |
-| `dockerfile-linter.yml` | Hadolint lint of Dockerfiles | `pull_request` | All repos (no-op where no `Dockerfile` exists) |
+| `branch-target-check.yml` | Caller stub: delegates branch target enforcement to `branch-target-check-ci.yml` | `pull_request` | All repos |
+| `branch-target-check-ci.yml` | Reusable: enforce `dev` or `release/v*` as PR base when targeting `main`; called by `branch-target-check.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `codacy.yml` | Caller stub: delegates Codacy static analysis to `codacy-ci.yml` | `push`, `pull_request` | All repos |
+| `codacy-ci.yml` | Reusable: Codacy CLI static analysis (ESLint, Semgrep); SARIF runs merged before upload; called by `codacy.yml` - ⚠️ [known issue #38](https://github.com/tazama-lf/workflows/issues/38) | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `codeql.yml` | Caller stub: delegates CodeQL SAST to `codeql-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]`, schedule | All repos |
+| `codeql-ci.yml` | Reusable: GitHub CodeQL SAST security scan; called by `codeql.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `conventional-commits.yml` | Caller stub: delegates PR title validation to `conventional-commits-ci.yml` | `pull_request` | All repos |
+| `conventional-commits-ci.yml` | Reusable: validate PR title against Conventional Commits spec and apply GitHub label; called by `conventional-commits.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `dco-check.yml` | Caller stub: delegates DCO sign-off check to `dco-check-ci.yml` | `pull_request` | All repos |
+| `dco-check-ci.yml` | Reusable: verify DCO `Signed-off-by` on every PR commit; called by `dco-check.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `encoding-check.yml` | Caller stub: delegates BOM/encoding check to `encoding-check-ci.yml` | `pull_request` | All repos |
+| `encoding-check-ci.yml` | Reusable: fail PR if any changed file is UTF-16 or UTF-8 BOM encoded; called by `encoding-check.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `dependency-review.yml` | Caller stub: delegates dependency CVE/licence scan to `dependency-review-ci.yml` | `pull_request` | All repos |
+| `dependency-review-ci.yml` | Reusable: scan new dependencies for CVEs and licence restrictions; called by `dependency-review.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
+| `dockerfile-linter.yml` | Caller stub: delegates Hadolint linting to `dockerfile-linter-ci.yml` | `push: [dev,main]`, `pull_request: [dev]`, schedule | All repos (no-op where no `Dockerfile` exists) |
+| `dockerfile-linter-ci.yml` | Reusable: Hadolint Dockerfile lint with SARIF upload; called by `dockerfile-linter.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]`, `workflow_dispatch` | **Not synced** - committed directly to dual-container repos only |
 | `dockerhub-image-build-dual.yml` | Build and push versioned Docker images for backend and frontend | `push: [main]`, `release: [published]` | **Not synced** - committed directly to dual-container repos only |
 | `dockerhub-image-build-rc.yml` | Build and push `:rc` Docker image | `push: [dev]` | Service repos only (not SPECIFIC_REPOS) |
 | `dockerhub-image-build.yml` | Build and push versioned Docker image | `push: [main]` | Service repos only (not SPECIFIC_REPOS) |
-| `gpg-verify.yml` | Verify GPG signature on commits | `pull_request` | All repos |
+| `gpg-verify.yml` | Caller stub: delegates commit signature verification to `gpg-verify-ci.yml` | `pull_request` | All repos |
+| `gpg-verify-ci.yml` | Reusable: verify GPG/SSH signature on every PR commit via GitHub API; called by `gpg-verify.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `milestone.yml` | Close a milestone and trigger `release.yml` | `workflow_dispatch` | All repos |
-| `njsscan.yml` | Node.js security scan (semgrep) | `push`, `pull_request` | All repos |
+| `njsscan.yml` | Caller stub: delegates njsscan security scanning to `njsscan-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]`, schedule | All repos |
+| `njsscan-ci.yml` | Reusable: njsscan Node.js security scan with SARIF upload; called by `njsscan.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `node-ci.yml` | Reusable: Node 22 LTS CI: build, lint, test | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `node.js.yml` | Caller stub: delegates Node 22 LTS CI to `node-ci.yml` | `push: [dev,main]`, `pull_request: [dev,main]` | All repos |
 | `package-rule-rc.yml` | Reusable: build and push `:rc` Docker image for a rule processor | `workflow_call` | Not synced directly; caller stubs distributed to `RULE_REPOS` |
@@ -220,7 +230,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `publish.yml` | Publish npm package to GitHub Packages | `push: [main]`, `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release-train.yml` | Resolve rc deps, prepare release PR, bump version | `workflow_dispatch` | `PUBLISH_REPOS` only |
 | `release.yml` | Create GitHub release with auto-generated changelog as release body | `repository_dispatch: [release]` (from `milestone.yml`) | All repos |
-| `sbom.yml` | Generate SBOM from Docker image | `push: [main]` | All repos - ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
+| `sbom.yml` | Caller stub: delegates Anchore Syft SBOM scan to `sbom-ci.yml` | `push: [main]` | All repos - ⚠️ [known issue #39](https://github.com/tazama-lf/workflows/issues/39) |
+| `sbom-ci.yml` | Reusable: build Docker image and generate Syft SBOM via Dependency Submission API; called by `sbom.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `scorecard.yml` | OSSF Scorecard supply-chain security | `push: [main,dev]`, schedule (weekly), `branch_protection_rule` | Service repos only (not `PUBLISH_REPOS`) |
 | `sync-workflows.yml` | Distribute canonical workflows to all target repos | `push: [dev]`, `workflow_dispatch` | **Not synced** - canonical-only |
 | `version-check.yml` | Block PR to `main` if `package.json` version has a prerelease suffix | `pull_request: [main]` | `PUBLISH_REPOS` only |
@@ -243,7 +254,29 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | File | Reason |
 |------|--------|
 | `sync-workflows.yml` | Canonical-only; never distributed to target repos |
+| `branch-target-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `branch-target-check.yml` stub at runtime via `@dev` ref |
+| `codacy-ci.yml` | Reusable workflow; stays in this repo and is called by the `codacy.yml` stub at runtime via `@dev` ref |
+| `codeql-ci.yml` | Reusable workflow; stays in this repo and is called by the `codeql.yml` stub at runtime via `@dev` ref |
+| `conventional-commits-ci.yml` | Reusable workflow; stays in this repo and is called by the `conventional-commits.yml` stub at runtime via `@dev` ref |
+| `dco-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `dco-check.yml` stub at runtime via `@dev` ref |
+| `dependency-review-ci.yml` | Reusable workflow; stays in this repo and is called by the `dependency-review.yml` stub at runtime via `@dev` ref |
+| `dockerfile-linter-ci.yml` | Reusable workflow; stays in this repo and is called by the `dockerfile-linter.yml` stub at runtime via `@dev` ref |
+| `encoding-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `encoding-check.yml` stub at runtime via `@dev` ref |
+| `gpg-verify-ci.yml` | Reusable workflow; stays in this repo and is called by the `gpg-verify.yml` stub at runtime via `@dev` ref |
+| `njsscan-ci.yml` | Reusable workflow; stays in this repo and is called by the `njsscan.yml` stub at runtime via `@dev` ref |
 | `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
+| `sbom-ci.yml` | Reusable workflow; stays in this repo and is called by the `sbom.yml` stub at runtime via `@dev` ref |
+| `codacy-ci.yml` | Reusable workflow; stays in this repo and is called by the `codacy.yml` stub at runtime via `@dev` ref |
+| `codeql-ci.yml` | Reusable workflow; stays in this repo and is called by the `codeql.yml` stub at runtime via `@dev` ref |
+| `conventional-commits-ci.yml` | Reusable workflow; stays in this repo and is called by the `conventional-commits.yml` stub at runtime via `@dev` ref |
+| `dco-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `dco-check.yml` stub at runtime via `@dev` ref |
+| `dependency-review-ci.yml` | Reusable workflow; stays in this repo and is called by the `dependency-review.yml` stub at runtime via `@dev` ref |
+| `dockerfile-linter-ci.yml` | Reusable workflow; stays in this repo and is called by the `dockerfile-linter.yml` stub at runtime via `@dev` ref |
+| `encoding-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `encoding-check.yml` stub at runtime via `@dev` ref |
+| `gpg-verify-ci.yml` | Reusable workflow; stays in this repo and is called by the `gpg-verify.yml` stub at runtime via `@dev` ref |
+| `njsscan-ci.yml` | Reusable workflow; stays in this repo and is called by the `njsscan.yml` stub at runtime via `@dev` ref |
+| `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
+| `sbom-ci.yml` | Reusable workflow; stays in this repo and is called by the `sbom.yml` stub at runtime via `@dev` ref |
 
 **Additionally distributed (not in `.github/workflows/`):**
 

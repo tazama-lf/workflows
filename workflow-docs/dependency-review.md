@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Scans dependency manifest file changes in pull requests and blocks merging if newly added or updated dependencies contain known security vulnerabilities.
+Caller stub that delegates dependency CVE/licence scanning to the centralised reusable workflow [`dependency-review-ci.yml`](dependency-review-ci.md). Contains only the `pull_request` trigger and a single `uses:` reference - no logic lives here. This file is synced to all consumer repos unchanged.
 
 ---
 
@@ -16,29 +16,36 @@ Scans dependency manifest file changes in pull requests and blocks merging if ne
 
 ## Execution Context
 
-| Property | Value |
-|----------|-------|
-| Runner | `ubuntu-latest` |
-| Typical duration | ~30 s |
-| Concurrency | none |
-| Permissions | `contents: read` |
+All execution context is defined in [`dependency-review-ci.yml`](dependency-review-ci.md). This stub adds no jobs, steps, or environment variables of its own.
 
 ---
 
 ## Jobs
 
-### `dependency-review` - Dependency Review
+### `dependency-review`
 
-**Steps:**
+Delegates entirely to the reusable workflow:
 
-1. `actions/checkout@v4` - checks out source
-2. `actions/dependency-review-action@v4` - reviews dependency manifests; fails PR if vulnerable versions are introduced
+```yaml
+uses: tazama-lf/workflows/.github/workflows/dependency-review-ci.yml@dev
+secrets: inherit
+```
+
+See [`dependency-review-ci.yml` documentation](dependency-review-ci.md) for the full job breakdown.
 
 ---
 
 ## Required Secrets
 
-None.
+None. `secrets: inherit` is passed as a formality; the reusable workflow uses only `GITHUB_TOKEN`.
+
+---
+
+## Permissions
+
+| Scope | Level |
+|-------|-------|
+| `contents` | `read` |
 
 ---
 
@@ -48,25 +55,4 @@ None.
 |-------|----------|
 | All `REPOS` | Receives this file |
 
----
-
-## Dependencies (pinned actions)
-
-| Action | Pinned SHA | Semver alias |
-|--------|-----------|----------|
-| `actions/checkout` | tag ref `v4` | - |
-| `actions/dependency-review-action` | tag ref `v4` | - |
-
----
-
-## Known Limitations / Notes
-
-- Requires GitHub Advanced Security (or a public repo) for results to be enforced as a blocking check.
-
----
-
-## Repository Overrides
-
-| Repository | Reason |
-|-----------|--------|
-| _(none)_ | _(all synced repos use the canonical version)_ |
+Because the stub is static (it always points to `@dev`), subsequent syncs will skip repos where the file is already up to date.

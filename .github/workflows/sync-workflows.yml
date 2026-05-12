@@ -157,6 +157,16 @@ jobs:
           cp -r .github/workflows/* temp-workflows/
           rm temp-workflows/sync-workflows.yml  # Remove the sync-workflows.yml to avoid recursive syncing
           rm -f temp-workflows/node-ci.yml           # Reusable workflow: called by reference from node.js.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/conventional-commits-ci.yml  # Reusable workflow: called by reference from conventional-commits.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/dco-check-ci.yml              # Reusable workflow: called by reference from dco-check.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/dependency-review-ci.yml      # Reusable workflow: called by reference from dependency-review.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/encoding-check-ci.yml         # Reusable workflow: called by reference from encoding-check.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/gpg-verify-ci.yml             # Reusable workflow: called by reference from gpg-verify.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/branch-target-check-ci.yml    # Reusable workflow: called by reference from branch-target-check.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/codeql-ci.yml                  # Reusable workflow: called by reference from codeql.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/njsscan-ci.yml                 # Reusable workflow: called by reference from njsscan.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/dockerfile-linter-ci.yml       # Reusable workflow: called by reference from dockerfile-linter.yml stub; consumer repos don't need a local copy
+          rm -f temp-workflows/sbom-ci.yml                    # Reusable workflow: called by reference from sbom.yml stub; consumer repos don't need a local copy
           rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
           rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
 

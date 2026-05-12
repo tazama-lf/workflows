@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Reusable CodeQL analysis workflow.
+# Called by consumer repos via a thin stub (codeql.yml) that uses this workflow.
+# Logic changes belong here - do not add steps to the stub.
+# For more information see: https://docs.github.com/en/actions/sharing-automations/reusing-workflows
+
+# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+
+name: "CodeQL (reusable)"
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@5c8a8a642e79153f5d047b10ec1cba1d1cc65699  # v3
+      with:
+        languages: ${{ matrix.language }}
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@5c8a8a642e79153f5d047b10ec1cba1d1cc65699  # v3
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@5c8a8a642e79153f5d047b10ec1cba1d1cc65699  # v3
+      with:
+        category: "/language:${{matrix.language}}"
