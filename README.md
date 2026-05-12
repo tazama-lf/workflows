@@ -304,17 +304,6 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `njsscan-ci.yml` | Reusable workflow; stays in this repo and is called by the `njsscan.yml` stub at runtime via `@dev` ref |
 | `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
 | `sbom-ci.yml` | Reusable workflow; stays in this repo and is called by the `sbom.yml` stub at runtime via `@dev` ref |
-| `codacy-ci.yml` | Reusable workflow; stays in this repo and is called by the `codacy.yml` stub at runtime via `@dev` ref |
-| `codeql-ci.yml` | Reusable workflow; stays in this repo and is called by the `codeql.yml` stub at runtime via `@dev` ref |
-| `conventional-commits-ci.yml` | Reusable workflow; stays in this repo and is called by the `conventional-commits.yml` stub at runtime via `@dev` ref |
-| `dco-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `dco-check.yml` stub at runtime via `@dev` ref |
-| `dependency-review-ci.yml` | Reusable workflow; stays in this repo and is called by the `dependency-review.yml` stub at runtime via `@dev` ref |
-| `dockerfile-linter-ci.yml` | Reusable workflow; stays in this repo and is called by the `dockerfile-linter.yml` stub at runtime via `@dev` ref |
-| `encoding-check-ci.yml` | Reusable workflow; stays in this repo and is called by the `encoding-check.yml` stub at runtime via `@dev` ref |
-| `gpg-verify-ci.yml` | Reusable workflow; stays in this repo and is called by the `gpg-verify.yml` stub at runtime via `@dev` ref |
-| `njsscan-ci.yml` | Reusable workflow; stays in this repo and is called by the `njsscan.yml` stub at runtime via `@dev` ref |
-| `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
-| `sbom-ci.yml` | Reusable workflow; stays in this repo and is called by the `sbom.yml` stub at runtime via `@dev` ref |
 
 **Additionally distributed (not in `.github/workflows/`):**
 
@@ -473,16 +462,7 @@ There is no automated mirror between this repo and `frmscoe/workflows`. After me
 
 ## Known Issues
 
-Active bugs where workflow behaviour differs from expectation. See the [issues tab](https://github.com/tazama-lf/workflows/issues) for the full list and status.
-
-| Issue | Affected workflow(s) | Reference |
-|-------|---------------------|-----------|
-| `sync-workflows.yml` fires on all PR events to `dev`, not only on merge - do not merge sync PRs in target repos until the source PR here is confirmed merged | `sync-workflows.yml` | [#36](https://github.com/tazama-lf/workflows/issues/36) |
-| `dco-check.yml` uses a reversed `git log` range - DCO sign-off is not being verified on the actual PR commits | `dco-check.yml` | [#37](https://github.com/tazama-lf/workflows/issues/37) |
-| Codacy CLI crashes with `MalformedInputException` on checkov output from multi-line YAML files - workaround: add `.checkov.yaml` with `skip-framework: github_actions` at the repo root | `codacy.yml` | [#38](https://github.com/tazama-lf/workflows/issues/38) |
-| `sbom.yml` is synced to library and rule repos but runs `docker build`, which fails in repos without a `Dockerfile` | `sbom.yml` | [#39](https://github.com/tazama-lf/workflows/issues/39) |
-| `milestone.yml` and `release.yml` use the deprecated `::set-output` syntax and `actions/checkout@v2` | `milestone.yml`, `release.yml` | [#40](https://github.com/tazama-lf/workflows/issues/40) |
-| Service repo clone URLs in `sync-workflows.yml` still use the `frmscoe` org - full migration to `tazama-lf` is pending | `sync-workflows.yml` | [#28](https://github.com/tazama-lf/workflows/issues/28) |
+See the [issues tab](https://github.com/tazama-lf/workflows/issues) for active bugs and tracked work.
 
 ---
 

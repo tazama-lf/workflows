@@ -19,25 +19,3 @@ jobs:
   branch-target-check:
     uses: tazama-lf/workflows/.github/workflows/branch-target-check-ci.yml@dev
     secrets: inherit
-
-jobs:
-  check-source-branch:
-    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify PR source branch is dev or release/v<N>.*
-        env:
-          SOURCE: ${{ github.head_ref }}
-        run: |
-          if [[ "$SOURCE" == "dev" || "$SOURCE" == release/v[0-9]* ]]; then
-            echo "✅ Source branch '$SOURCE' is a valid base for a PR to main."
-          else
-            echo "❌ PRs to main must come from 'dev' or a 'release/v<N>.*' branch (e.g. release/v1.2)."
-            echo "   This PR is from '$SOURCE'."
-            echo ""
-            echo "   If you are working on a feature or fix, please retarget this PR to 'dev':"
-            echo "     gh pr edit --base dev"
-            echo ""
-            echo "   Only 'dev' → main (via release-train.yml) and 'release/v<N>.*' → main merges are permitted."
-            exit 1
-          fi
