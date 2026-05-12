@@ -54,9 +54,9 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 
 | Class | Repos | Output | Notes |
 |-------|-------|--------|-------|
-| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `data-enrichment-service`, `event-monitoring-service` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
+| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `data-enrichment-service`, `event-monitoring-service` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
 | **Dual-container service repos** | `case-management-system`, `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
-| **Other service repos** | `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
+| **Other service repos** | `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
 | **Rule repos - tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
 | **Rule repos - frmscoe** | `rule-001` through `rule-091` (33 active repos) | Docker image | Managed via [`frmscoe/workflows`](https://github.com/frmscoe/workflows); receive Docker builds via `package-rule*.yml` caller stubs |
@@ -155,7 +155,7 @@ All other steps (PR checks, `sbom.yml`, `scorecard.yml`, `release.yml`, etc.) ar
 
 ### 4. Other service repos (no Docker CI build)
 
-`relay-service`, `batch-ppa`, `rule-executer`, and `Full-Stack-Docker-Tazama` follow the same feature development and PR check flow as Docker-building service repos but do **not** receive `dockerhub-image-build*.yml` or `sbom.yml`. Their build and release processes (if any) are managed outside this workflow set.
+`relay-service`, `rule-executer`, and `Full-Stack-Docker-Tazama` follow the same feature development and PR check flow as Docker-building service repos but do **not** receive `dockerhub-image-build*.yml` or `sbom.yml`. Their build and release processes (if any) are managed outside this workflow set.
 
 ---
 
@@ -283,7 +283,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | Group | Members | Behaviour |
 |-------|---------|-----------|
 | `REPOS` | All 32 tazama-lf target repos | Receive all workflows except those explicitly excluded |
-| `SPECIFIC_REPOS` | All library repos + `relay-service`, `batch-ppa`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) + multi-image repos (`biar`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
+| `SPECIFIC_REPOS` | All library repos + `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) + multi-image repos (`biar`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
 | `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`, `library-dependency-rollout.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
 
