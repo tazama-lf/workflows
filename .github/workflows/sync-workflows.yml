@@ -311,7 +311,7 @@ jobs:
               echo ""
               for entry in "${CREATED_PRS[@]}"; do
                 pr_url="${entry#* }"
-                echo "- $pr_url"
+                echo "- [$pr_url]($pr_url)"
               done
               echo ""
             fi
@@ -320,7 +320,7 @@ jobs:
               echo ""
               for entry in "${EXISTING_PRS[@]}"; do
                 pr_url="${entry#* }"
-                echo "- $pr_url"
+                echo "- [$pr_url]($pr_url)"
               done
               echo ""
             fi
