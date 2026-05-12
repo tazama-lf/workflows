@@ -152,6 +152,11 @@ jobs:
           # Capture the workspace root so we can reference config-templates/ after cd-ing into each repo
           WORKFLOWS_ROOT="${GITHUB_WORKSPACE}"
 
+          # Accumulate PR results for the job summary
+          CREATED_PRS=()
+          EXISTING_PRS=()
+          NO_CHANGE_REPOS=()
+
           # Build the temp-workflows bundle once, outside the repo loop
           mkdir -p temp-workflows
           cp -r .github/workflows/* temp-workflows/
@@ -282,9 +287,46 @@ jobs:
             done
 
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
-            if ! gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS; then
-              gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" || echo "PR already exists but could not be updated"
+            PR_URL=$(gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null)
+            if [ -n "$PR_URL" ]; then
+              CREATED_PRS+=("$ORG/$repo $PR_URL")
+            else
+              # PR already exists - try to update and find its URL
+              gh pr edit sync-workflows-update --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" 2>/dev/null || true
+              EXISTING_URL=$(gh pr view sync-workflows-update --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
+              if [ -n "$EXISTING_URL" ]; then
+                EXISTING_PRS+=("$ORG/$repo $EXISTING_URL")
+              fi
             fi
 
             cd ..
           done
+
+          # Write job summary
+          {
+            echo "## Sync Workflows — PR Summary"
+            echo ""
+            if [ ${#CREATED_PRS[@]} -gt 0 ]; then
+              echo "### New PRs created (${#CREATED_PRS[@]})"
+              echo ""
+              for entry in "${CREATED_PRS[@]}"; do
+                repo_name="${entry%% *}"
+                pr_url="${entry#* }"
+                echo "- [$repo_name]($pr_url)"
+              done
+              echo ""
+            fi
+            if [ ${#EXISTING_PRS[@]} -gt 0 ]; then
+              echo "### Existing PRs updated (${#EXISTING_PRS[@]})"
+              echo ""
+              for entry in "${EXISTING_PRS[@]}"; do
+                repo_name="${entry%% *}"
+                pr_url="${entry#* }"
+                echo "- [$repo_name]($pr_url)"
+              done
+              echo ""
+            fi
+            if [ ${#CREATED_PRS[@]} -eq 0 ] && [ ${#EXISTING_PRS[@]} -eq 0 ]; then
+              echo "_No PRs were created or updated — all repos were already up to date._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
