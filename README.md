@@ -10,6 +10,44 @@ For detailed documentation on any individual workflow, see the [`workflow-docs/`
 
 ---
 
+## Table of Contents
+
+- [Repository Classes](#repository-classes)
+- [Standard PR Check Suite](#standard-pr-check-suite)
+- [SDLC Flows](#sdlc-flows)
+  - [1. Library repos (PUBLISH\_REPOS)](#1-library-repos-publish_repos)
+  - [2. Service repos (Docker-building)](#2-service-repos-docker-building)
+  - [3. Dual-container service repos](#3-dual-container-service-repos-case-management-system-connection-studio-rule-studio)
+  - [4. Other service repos (no Docker CI build)](#4-other-service-repos-no-docker-ci-build)
+  - [5. Rule repos - tazama-lf](#5-rule-repos---tazama-lf-rule-901-rule-902)
+  - [6. Rule repos - frmscoe](#6-rule-repos---frmscoe-rule-001-through-rule-091)
+  - [7. Multi-image service repos (biar)](#7-multi-image-service-repos-biar)
+  - [8. Canonical workflow changes (this repo)](#8-canonical-workflow-changes-this-repo)
+- [Canonical Workflow Reference](#canonical-workflow-reference)
+- [Sync Distribution](#sync-distribution)
+- [Adding Automation to a New Repository](#adding-automation-to-a-new-repository)
+  - [Step 1 - Determine the repository class](#step-1---determine-the-repository-class)
+  - [Step 2 - Add the repo to sync-workflows.yml](#step-2---add-the-repo-to-sync-workflowsyml-in-this-repo)
+  - [Step 3 - Bootstrap the new repo's workflow directory](#step-3---bootstrap-the-new-repos-workflow-directory)
+  - [Step 4 - Open a PR to dev in this repo](#step-4---open-a-pr-to-dev-in-this-repo)
+  - [Step 5 - Update workflow-docs/](#step-5---update-workflow-docs)
+- [Routine Maintenance](#routine-maintenance)
+  - [Updating the library consumer catalog](#updating-the-library-consumer-catalog-library-consumersjson)
+  - [Pinned action SHA updates](#pinned-action-sha-updates)
+  - [Node.js version updates](#nodejs-version-updates)
+  - [gh CLI version](#gh-cli-version)
+  - [Publishing an rc package manually](#publishing-an-rc-package-manually)
+  - [Running release-train](#running-release-train)
+  - [Creating a release (service repos)](#creating-a-release-service-repos)
+  - [OSSF Scorecard](#ossf-scorecard)
+  - [Auditing sync coverage](#auditing-sync-coverage)
+  - [Updating frmscoe/workflows](#updating-frmscoeworkflows)
+- [Known Issues](#known-issues)
+- [Frequently Asked Questions](#frequently-asked-questions)
+  - [How do I run a specific workflow from the command line?](#how-do-i-run-a-specific-workflow-in-a-repo-at-a-specific-branch-from-the-command-line)
+
+---
+
 ## Repository Classes
 
 Each repository in the Tazama ecosystem belongs to one class. The class determines which workflows it receives, which SDLC path applies, and whether it builds Docker images, publishes npm packages, or both.
@@ -445,3 +483,41 @@ Active bugs where workflow behaviour differs from expectation. See the [issues t
 | `sbom.yml` is synced to library and rule repos but runs `docker build`, which fails in repos without a `Dockerfile` | `sbom.yml` | [#39](https://github.com/tazama-lf/workflows/issues/39) |
 | `milestone.yml` and `release.yml` use the deprecated `::set-output` syntax and `actions/checkout@v2` | `milestone.yml`, `release.yml` | [#40](https://github.com/tazama-lf/workflows/issues/40) |
 | Service repo clone URLs in `sync-workflows.yml` still use the `frmscoe` org - full migration to `tazama-lf` is pending | `sync-workflows.yml` | [#28](https://github.com/tazama-lf/workflows/issues/28) |
+
+---
+
+## Frequently Asked Questions
+
+### How do I run a specific workflow in a repo at a specific branch from the command line?
+
+Use the `gh` CLI (works identically on Windows, macOS, and Linux):
+
+```sh
+gh workflow run <workflow-file> -R <owner>/<repo> --ref <branch>
+```
+
+**Example - trigger the Node.js CI workflow on `dev` in a library repo:**
+
+By file:
+
+```sh
+gh workflow run node.js.yml -R tazama-lf/frms-coe-lib --ref dev
+```
+
+or, by name:
+
+```sh
+gh workflow run "Node.js CI" -R tazama-lf/frms-coe-lib --ref dev
+```
+
+**Example - trigger a workflow that has required inputs (`release-train.yml`):**
+
+```sh
+gh workflow run release-train.yml -R tazama-lf/frms-coe-lib --ref dev -f version=4.0.0
+```
+
+**Notes:**
+- The workflow must have a `workflow_dispatch:` trigger - workflows without it cannot be triggered manually. Check the [Canonical Workflow Reference](#canonical-workflow-reference) table for the trigger column.
+- `<workflow-file>` is the filename (e.g. `node.js.yml`) or the workflow's `name:` string as it appears in the Actions UI (e.g. `"Node.js CI"`).
+- `--ref` must be a branch that exists in the target repo. To run against the canonical reusable workflows in this repo, use `--ref dev`.
+- After triggering, check run status with: `gh run list -R <owner>/<repo> --workflow <workflow-file>`
