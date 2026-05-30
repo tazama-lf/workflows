@@ -30,7 +30,7 @@ Propagates canonical workflow files and the standard `.codacy.yml` engine allowl
 
 | Variable | Contents |
 |----------|---------|
-| `REPOS` | All 26 target repositories (service + library) |
+| `REPOS` | All 33 target repositories (service + library) |
 | `SPECIFIC_REPOS` | Library and non-Docker repos that skip `SPECIFIC_FILES` |
 | `SPECIFIC_FILES` | `dockerhub-image-build.yml dockerhub-image-build-rc.yml` |
 | `PUBLISH_REPOS` | Library repos that receive `publish.yml`, `version-check.yml`, `release-train.yml` but not `scorecard.yml` |

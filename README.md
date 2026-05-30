@@ -54,7 +54,7 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 
 | Class | Repos | Output | Notes |
 |-------|-------|--------|-------|
-| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `data-enrichment-service`, `event-monitoring-service` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
+| **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `data-enrichment-service`, `event-monitoring-service`, `tazama-demo` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
 | **Dual-container service repos** | `case-management-system`, `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
 | **Other service repos** | `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
@@ -216,13 +216,13 @@ All other steps (PR checks, `scorecard.yml`, `release.yml`, etc.) are identical 
 
 ### 8. Canonical workflow changes (this repo)
 
-Changes to this repo propagate to all 32 target repositories. This is the highest-impact SDLC path.
+Changes to this repo propagate to all 33 target repositories. This is the highest-impact SDLC path.
 
 1. **DevOps** - modifies workflow files in `.github/workflows/`; updates the corresponding `workflow-docs/` entry.
 2. **DevOps** - opens pull request targeting `dev`.
 3. **AUTO** - standard PR check suite fires against this repo.
 4. **Reviewer - MANUAL** - reviews and merges the source PR to `dev` in this repo.
-5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs (targeting `dev`) and `sync-workflows-update-main` PRs (targeting `main`) in all 32 target repos. Both PRs carry `[skip ci]` in the commit message and PR title so that squash-merging suppresses all push-triggered workflows (CI, Docker builds) on the resulting commit in the target repo.
+5. **AUTO** - `sync-workflows.yml` fires on `push: dev`; opens `sync-workflows-update` PRs (targeting `dev`) and `sync-workflows-update-main` PRs (targeting `main`) in all 33 target repos. Both PRs carry `[skip ci]` in the commit message and PR title so that squash-merging suppresses all push-triggered workflows (CI, Docker builds) on the resulting commit in the target repo.
 6. **Reviewers in target repos - MANUAL** - review and merge both the `sync-workflows-update → dev` and `sync-workflows-update-main → main` PRs in each target repo. Keeping `main` current ensures scheduled workflows (`scorecard.yml`, `codeql.yml`, `njsscan.yml`, etc.) always run against current stub files - GitHub's scheduler reads scheduled workflows from the default branch only.
 7. **DevOps - MANUAL** - applies the same changes to [`frmscoe/workflows`](https://github.com/frmscoe/workflows) via a separate PR (no automated mirror exists between the two workflow repos).
 8. **AUTO** - once merged to `dev` in `frmscoe/workflows`, its `sync-workflows.yml` fires on `push: dev` and distributes the changes to all 33 frmscoe rule repos.
@@ -323,7 +323,7 @@ Not all workflows are equally active on `dev` and `main`. The table below catego
 | **Push CI** - fire on push to both branches | `node.js.yml`, `dockerfile-linter.yml` (push trigger), `codeql.yml` (push trigger), `njsscan.yml` (push trigger) | Both |
 | **PR gate checks** - fire on pull request events only; physical branch location does not matter | `branch-target-check.yml`, `conventional-commits.yml`, `dco-check.yml`, `dependency-review.yml`, `encoding-check.yml`, `gpg-verify.yml`, `codacy.yml` | PR only |
 
-**Full `REPOS` list (32 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`.
+**Full `REPOS` list (33 repos):** `relay-service`, `auth-service`, `typology-processor`, `event-director`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `transaction-aggregation-decisioning-processor`, `Full-Stack-Docker-Tazama`, `rule-executer`, `event-flow`, `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `rule-901`, `rule-902`, `tcs-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq`, `audit-lib`, `data-enrichment-service`, `event-monitoring-service`, `case-management-system`, `connection-studio`, `rule-studio`, `biar`, `tazama-demo`.
 
 > **frmscoe rule repos are not in this list.** They are managed by [`frmscoe/workflows`](https://github.com/frmscoe/workflows), which syncs to 33 rule repos (`rule-001` through `rule-091`, active subset) via its own `sync-workflows.yml` triggered on `push: dev`.
 
