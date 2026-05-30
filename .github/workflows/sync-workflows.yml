@@ -86,7 +86,7 @@ jobs:
             batch-ppa
             admin-service
             tms-service
-            transaction-aggregation-decisioning-processor
+            event-adjudicator
             Full-Stack-Docker-Tazama
             rule-executer
             event-flow
