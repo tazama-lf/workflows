@@ -108,6 +108,7 @@ jobs:
             connection-studio
             rule-studio
             biar
+            tazama-demo
           SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
           SPECIFIC_REPOS: |  # Repos that do NOT build Docker images - receive all workflows except SPECIFIC_FILES
             relay-service
