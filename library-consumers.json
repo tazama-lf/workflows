@@ -88,7 +88,7 @@
       },
       {
         "org": "tazama-lf",
-        "repo": "transaction-aggregation-decisioning-processor"
+        "repo": "event-adjudicator"
       },
       {
         "org": "tazama-lf",
@@ -265,7 +265,7 @@
       },
       {
         "org": "tazama-lf",
-        "repo": "transaction-aggregation-decisioning-processor"
+        "repo": "event-adjudicator"
       },
       {
         "org": "tazama-lf",
