@@ -364,15 +364,15 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 
 > Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) - full org migration pending).
 
-### Step 3 - Bootstrap the new repo's workflow directory
+### Step 3 - (No manual bootstrap required)
 
-`sync-workflows.yml` only runs against repos that already have a `.github/workflows/` directory. For a brand-new repo, copy the relevant workflows manually from this repo's `.github/workflows/` before raising the sync PR:
+A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.yml` creates the `.github/workflows/` directory itself (`mkdir -p`) before copying, so it runs against repos that have no workflow directory yet. On the first sync it automatically:
 
-1. Create `.github/workflows/` in the new repo.
-2. Copy all applicable workflow files (refer to the [Canonical Workflow Reference](#canonical-workflow-reference) table).
-3. If it is a tazama-lf rule repo, stamp the caller stubs for `package-rule-rc.yml` and `package-rule.yml` (see the stub templates in [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) under the `RULE_REPOS` block).
-4. Commit directly to `dev` in the new repo (or raise a bootstrap PR).
-5. Copy `node.js.yml` manually and customise it for the repo (it is never synced).
+- Creates `.github/workflows/` and copies every applicable workflow file (per the class rules in [Step 1](#step-1---determine-the-repository-class)), including the `node.js.yml` CI entrypoint.
+- Stamps the `package-rule-rc.yml` / `package-rule.yml` caller stubs for `RULE_REPOS`.
+- Copies `config-templates/.codacy.yml` to the repo root.
+
+The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are the only workflow files never distributed by sync; they apply solely to dual-container repos and are committed directly there (see [Section 3](#3-dual-container-service-repos-case-management-system-connection-studio-rule-studio)).
 
 ### Step 4 - Open a PR to `dev` in this repo
 
