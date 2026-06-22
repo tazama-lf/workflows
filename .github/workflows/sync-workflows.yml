@@ -87,6 +87,7 @@ jobs:
             admin-service
             tms-service
             event-adjudicator
+            simulation-service
             Full-Stack-Docker-Tazama
             rule-executer
             event-flow

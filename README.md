@@ -4,7 +4,7 @@
 
 Canonical GitHub Actions workflows for the Tazama project. This repository is the **single source of truth** for CI/CD automation across all active Tazama repositories in both the `tazama-lf` and `frmscoe` organisations.
 
-Workflow files are distributed to target repositories automatically by [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) on every pull request to `dev` in this repo. The `frmscoe/workflows` repo is a manually-maintained mirror of the relevant subset of files for `frmscoe` rule repos, seeded from this repo.
+Workflow files are distributed to target repositories automatically by [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) whenever a change is pushed to `dev` in this repo (that is, when a pull request merges). The `frmscoe/workflows` repo is a manually-maintained mirror of the relevant subset of files for `frmscoe` rule repos, seeded from this repo.
 
 For detailed documentation on any individual workflow, see the [`workflow-docs/`](workflow-docs/) directory. A template for new entries is at [`workflow-docs/docs-template.md`](workflow-docs/docs-template.md).
 
@@ -28,7 +28,7 @@ For detailed documentation on any individual workflow, see the [`workflow-docs/`
 - [Adding Automation to a New Repository](#adding-automation-to-a-new-repository)
   - [Step 1 - Determine the repository class](#step-1---determine-the-repository-class)
   - [Step 2 - Add the repo to sync-workflows.yml](#step-2---add-the-repo-to-sync-workflowsyml-in-this-repo)
-  - [Step 3 - Bootstrap the new repo's workflow directory](#step-3---bootstrap-the-new-repos-workflow-directory)
+  - [Step 3 - No manual bootstrap required](#step-3---no-manual-bootstrap-required)
   - [Step 4 - Open a PR to dev in this repo](#step-4---open-a-pr-to-dev-in-this-repo)
   - [Step 5 - Update workflow-docs/](#step-5---update-workflow-docs)
 - [Routine Maintenance](#routine-maintenance)
@@ -364,21 +364,19 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 
 > Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) - full org migration pending).
 
-### Step 3 - Bootstrap the new repo's workflow directory
+### Step 3 - (No manual bootstrap required)
 
-`sync-workflows.yml` only runs against repos that already have a `.github/workflows/` directory. For a brand-new repo, copy the relevant workflows manually from this repo's `.github/workflows/` before raising the sync PR:
+A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.yml` creates the `.github/workflows/` directory itself (`mkdir -p`) before copying, so it runs against repos that have no workflow directory yet. On the first sync it automatically:
 
-1. Create `.github/workflows/` in the new repo.
-2. Copy all applicable workflow files (refer to the [Canonical Workflow Reference](#canonical-workflow-reference) table).
-3. If it is a tazama-lf rule repo, stamp the caller stubs for `package-rule-rc.yml` and `package-rule.yml` (see the stub templates in [`sync-workflows.yml`](.github/workflows/sync-workflows.yml) under the `RULE_REPOS` block).
-4. Commit directly to `dev` in the new repo (or raise a bootstrap PR).
-5. Copy `node.js.yml` manually and customise it for the repo (it is never synced).
+- Creates `.github/workflows/` and copies every applicable workflow file (per the class rules in [Step 1](#step-1---determine-the-repository-class)), including the `node.js.yml` CI entrypoint.
+- Stamps the `package-rule-rc.yml` / `package-rule.yml` caller stubs for `RULE_REPOS`.
+- Copies `config-templates/.codacy.yml` to the repo root.
+
+The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are the only workflow files never distributed by sync; they apply solely to dual-container repos and are committed directly there (see [Section 3](#3-dual-container-service-repos-case-management-system-connection-studio-rule-studio)).
 
 ### Step 4 - Open a PR to `dev` in this repo
 
-Raise a PR with the `sync-workflows.yml` changes from Step 2. When the PR is opened, `sync-workflows.yml` runs (due to the `pull_request: dev` trigger) and creates `sync-workflows-update` PRs in all existing repos - the new entry will be included.
-
-> ⚠️ Do not merge the sync PRs in target repos until this source PR is confirmed merged - see [known issue #36](https://github.com/tazama-lf/workflows/issues/36).
+Raise a PR with the `sync-workflows.yml` changes from Step 2 and merge it after review. When the PR **merges** to `dev`, `sync-workflows.yml` runs (on the `push: dev` trigger) and opens `sync-workflows-update` PRs in all target repos - the new entry is included. The sync does **not** run when the PR is merely opened (this was [#36](https://github.com/tazama-lf/workflows/issues/36), now fixed).
 
 ### Step 5 - Update `workflow-docs/`
 
