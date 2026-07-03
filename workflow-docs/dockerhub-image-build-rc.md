@@ -32,7 +32,7 @@ Builds a Docker image and pushes it to Docker Hub with a floating `:rc` tag when
 
 **Steps:**
 
-1. `actions/checkout@v4` - checks out source
+1. `actions/checkout@v4` (`ref: dev`) - checks out the `dev` (rc) line
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`
@@ -77,6 +77,7 @@ Builds a Docker image and pushes it to Docker Hub with a floating `:rc` tag when
 ## Known Limitations / Notes
 
 - The `:rc` tag is a floating pointer overwritten on every push to `dev`. Use a version-pinned prerelease tag (e.g. `1.2.3-rc.4`) for reproducible deployments.
+- The checkout step is pinned to `ref: dev` so a manual `workflow_dispatch` always builds the `dev` line. `actions/checkout` otherwise defaults to the triggering ref, which after the default-branch pivot to `main` would build stable code and mislabel it with the `:rc` tag. Do not remove the `ref: dev` pin.
 - `dependabot[bot]` actors are excluded.
 
 ---

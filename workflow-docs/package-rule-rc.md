@@ -43,7 +43,7 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 
 **Steps:**
 
-1. `actions/checkout@v4` - checks out rule repo source
+1. `actions/checkout@v4` (`ref: dev`) - checks out the rule repo `dev` (rc) line
 2. `actions/setup-node@v4` - Node 22
 3. `Read rule version from package.json` - reads `version`; fails if version is NOT a prerelease (`-` suffix required - guards against RC build running on a stable version)
 4. `Clone Rule Executer repository (dev branch)` - clones `tazama-lf/rule-executer@dev`
@@ -88,7 +88,7 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 
 - `dependabot[bot]` actors are excluded.
 - Rule repo caller stubs also trigger on `repository_dispatch: types: [rule-executer-update]`, enabling rule images to be rebuilt when `rule-executer` itself changes without needing a new commit in the rule repo.
-- The `:rc` tag is a floating pointer overwritten on every push to `dev`. Use the versioned tag (e.g. `1.0.0-rc.2`) for reproducible deployments.
+- The checkout step is pinned to `ref: dev`. RC builds must always read the rc line, but `actions/checkout` defaults to the ref that triggered the run - and under `repository_dispatch` (and `workflow_dispatch` once the default branch is `main`) that fallback is the repository default branch, not `dev`. Consumer rule repos pivoted their default branch from `dev` to `main`, so without the explicit `ref: dev` a dispatch-triggered run checked out `main` (a stable version) and failed the prerelease guard. Do not remove the `ref: dev` pin.
 
 ---
 
