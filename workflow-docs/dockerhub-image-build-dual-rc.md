@@ -32,7 +32,7 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 **Steps:**
 
-1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` - checks out source
+1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` (`ref: dev`) - checks out the `dev` (rc) line
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-backend`
@@ -44,7 +44,7 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 **Steps:**
 
-1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` - checks out source
+1. `actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd` (`ref: dev`) - checks out the `dev` (rc) line
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-frontend`
@@ -92,6 +92,7 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 - The two jobs (`push_backend_rc` and `push_frontend_rc`) run in parallel and are independent. A failure in one does not cancel the other.
 - The `:rc` tag is a floating pointer overwritten on every push to `dev`. Use a version-pinned prerelease tag for reproducible deployments.
+- Both checkout steps are pinned to `ref: dev` so a manual `workflow_dispatch` always builds the `dev` line. `actions/checkout` otherwise defaults to the triggering ref, which after the default-branch pivot to `main` would build stable code and mislabel it with the `:rc` tag. Do not remove the `ref: dev` pin.
 - `dependabot[bot]` actors are excluded from both jobs.
 
 ---
