@@ -89,6 +89,7 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 - `dependabot[bot]` actors are excluded.
 - Rule repo caller stubs also trigger on `repository_dispatch: types: [rule-executer-update]`, enabling rule images to be rebuilt when `rule-executer` itself changes without needing a new commit in the rule repo.
 - The checkout step is pinned to `ref: dev`. RC builds must always read the rc line, but `actions/checkout` defaults to the ref that triggered the run - and under `repository_dispatch` (and `workflow_dispatch` once the default branch is `main`) that fallback is the repository default branch, not `dev`. Consumer rule repos pivoted their default branch from `dev` to `main`, so without the explicit `ref: dev` a dispatch-triggered run checked out `main` (a stable version) and failed the prerelease guard. Do not remove the `ref: dev` pin.
+- The "Build and push RC Docker image" step's source-branch guard only applies to `push` events. Because the checkout is pinned to `ref: dev`, `repository_dispatch` and `workflow_dispatch` runs always build the dev line even though their `GITHUB_REF` resolves to the default branch (`main`); guarding those events on `GITHUB_REF` would incorrectly refuse the dispatch-triggered rebuilds.
 
 ---
 
