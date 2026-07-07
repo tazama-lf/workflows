@@ -110,8 +110,8 @@ jobs:
             rule-studio
             biar
             tazama-demo
-          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
-          SPECIFIC_REPOS: |  # Repos that do NOT build Docker images - receive all workflows except SPECIFIC_FILES
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Canonical single-image Docker workflows: only for repos that build a single Docker image (i.e. not in SPECIFIC_REPOS)
+          SPECIFIC_REPOS: |  # Repos excluded from the canonical single-image Docker workflows (SPECIFIC_FILES): either build no Docker image, or build via their own dual/custom workflows committed directly (connection-studio, rule-studio, biar, case-management-system)
             relay-service
             Full-Stack-Docker-Tazama
             rule-executer

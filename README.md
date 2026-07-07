@@ -17,11 +17,11 @@ For detailed documentation on any individual workflow, see the [`workflow-docs/`
 - [SDLC Flows](#sdlc-flows)
   - [1. Library repos (PUBLISH\_REPOS)](#1-library-repos-publish_repos)
   - [2. Service repos (Docker-building)](#2-service-repos-docker-building)
-  - [3. Dual-container service repos](#3-dual-container-service-repos-case-management-system-connection-studio-rule-studio)
+  - [3. Dual-container service repos](#3-dual-container-service-repos-connection-studio-rule-studio)
   - [4. Other service repos (no Docker CI build)](#4-other-service-repos-no-docker-ci-build)
   - [5. Rule repos - tazama-lf](#5-rule-repos---tazama-lf-rule-901-rule-902)
   - [6. Rule repos - frmscoe](#6-rule-repos---frmscoe-rule-001-through-rule-091)
-  - [7. Multi-image service repos (biar)](#7-multi-image-service-repos-biar)
+  - [7. Custom Docker build repos (biar, case-management-system)](#7-custom-docker-build-repos-biar-case-management-system)
   - [8. Canonical workflow changes (this repo)](#8-canonical-workflow-changes-this-repo)
 - [Canonical Workflow Reference](#canonical-workflow-reference)
 - [Sync Distribution](#sync-distribution)
@@ -55,12 +55,12 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 | Class | Repos | Output | Notes |
 |-------|-------|--------|-------|
 | **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `event-adjudicator`, `data-enrichment-service`, `event-monitoring-service`, `tazama-demo` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
-| **Dual-container service repos** | `case-management-system`, `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
+| **Dual-container service repos** | `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
 | **Other service repos** | `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
 | **Rule repos - tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
 | **Rule repos - frmscoe** | `rule-001` through `rule-091` (33 active repos) | Docker image | Managed via [`frmscoe/workflows`](https://github.com/frmscoe/workflows); receive Docker builds via `package-rule*.yml` caller stubs |
-| **Multi-image service repos** | `biar` | Docker images (5) | Produces 5 Docker images from subdirectories (`automation-orchestrator/`, `datalakehouse-api/`, `JupyterHub/`, `unstructured-pipeline/`, `nifi/`); in `SPECIFIC_REPOS` so does not receive single-image `dockerhub-image-build*.yml`; uses its own `dockerhub-image-build-multi*.yml` committed directly; mixed Python + TypeScript codebase |
+| **Custom Docker build repos** | `biar`, `case-management-system` | Docker images (multiple) | Each owns a bespoke, non-canonical Docker build that the single- and dual-image templates cannot represent; in `SPECIFIC_REPOS` so do not receive single-image `dockerhub-image-build*.yml`; use their own `dockerhub-image-build-multi*.yml` committed directly. `biar`: 5 images (mixed Python + TypeScript); `case-management-system`: 4 images (backend, migrate, frontend, voila) |
 | **Workflow repos** | `tazama-lf/workflows` (this repo), `frmscoe/workflows` | - | Canonical; not synced to |
 
 ---
@@ -140,9 +140,11 @@ Service repos produce versioned Docker images. They do not publish npm packages.
 
 ---
 
-### 3. Dual-container service repos (case-management-system, connection-studio, rule-studio)
+### 3. Dual-container service repos (connection-studio, rule-studio)
 
 These repos follow the same PR check and release flow as standard Docker-building service repos, but each repo produces **two** Docker images - one from `backend/` and one from `frontend/` - independently versioned via their respective `package.json` files.
+
+> `case-management-system` was previously in this class. It produces four images (backend, migrate, frontend, voila) and is now classified as a [custom Docker build repo](#7-custom-docker-build-repos-biar-case-management-system).
 
 They are listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). The dual-image Docker workflows are **not distributed via sync** and must be committed directly to each repo:
 
@@ -195,22 +197,22 @@ frmscoe rule repos reside in the `frmscoe` organisation and are managed by [`frm
 
 ---
 
-### 7. Multi-image service repos (biar)
+### 7. Custom Docker build repos (biar, case-management-system)
 
-BIAR is a mixed Python (PySpark) + TypeScript codebase that produces **5 Docker images** from separate subdirectories. It follows the same PR check and release flow as standard Docker-building service repos, but uses custom multi-image Docker publish workflows instead of the single-image or dual-image variants.
+These repos own **bespoke, non-canonical Docker build workflows** that the single-image and dual-image templates cannot represent. Producing multiple images is incidental - the defining trait is that each repo maintains its own committed Docker build workflow rather than a synced or canonical one. Both follow the same PR check and release flow as standard Docker-building service repos.
 
-It is listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). The multi-image Docker workflows are **not distributed via sync** and must be committed directly to the repo:
+Each is listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). Their Docker build workflows are **not distributed via sync** and must be committed directly to each repo, following the `dockerhub-image-build-multi*.yml` naming convention:
 
-- `dockerhub-image-build-multi-rc.yml` — fires on `push: dev`; builds and pushes 5 images tagged `:rc` to Docker Hub
-- `dockerhub-image-build-multi.yml` — fires on `push: main`; builds and pushes 5 images tagged `:{version}` to Docker Hub
+- `dockerhub-image-build-multi-rc.yml` — fires on `push: dev`; builds and pushes the repo's images tagged `:rc` to Docker Hub
+- `dockerhub-image-build-multi.yml` — fires on `push: main`; builds and pushes the repo's images tagged `:{version}` to Docker Hub
 
-Image names follow the pattern `tazamaorg/biar-{service}:{tag}` (e.g. `tazamaorg/biar-automation-orchestrator:rc`).
+**`biar`** — a mixed Python (PySpark) + TypeScript codebase that produces **5 Docker images** from separate subdirectories (`automation-orchestrator/`, `datalakehouse-api/`, `JupyterHub/`, `unstructured-pipeline/`, `nifi/`). Image names follow the pattern `tazamaorg/biar-{service}:{tag}` (e.g. `tazamaorg/biar-automation-orchestrator:rc`). The repo also maintains a custom `ci.yml` (unified TypeScript build/lint/test + Python linting + Docker build check) instead of the standard `node.js.yml`.
 
-The repo also maintains a custom `ci.yml` (unified TypeScript build/lint/test + Python linting + Docker build check) instead of the standard `node.js.yml`.
+**`case-management-system`** — produces **4 Docker images**: `case-management-system-backend` (from `./backend`), `case-management-system-migrate` (the `migrate` target of `backend/Dockerfile`), `case-management-system-frontend` (from `./frontend`), and `case-management-system-voila` (from `Dockerfile.viola`). The two extra images (migrate, voila) are why the dual template does not fit.
 
 All other steps (PR checks, `scorecard.yml`, `release.yml`, etc.) are identical to [Section 2](#2-service-repos-docker-building).
 
-> **Note:** The synced `sbom.yml` is a no-op for BIAR (no root-level `Dockerfile`). SBOM coverage for multi-image repos is tracked in [#81](https://github.com/tazama-lf/workflows/issues/81).
+> **Note:** The synced `sbom.yml` is a no-op for these repos (no root-level `Dockerfile`). SBOM coverage for custom-build repos is tracked in [#81](https://github.com/tazama-lf/workflows/issues/81).
 
 ---
 
@@ -283,7 +285,7 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | Group | Members | Behaviour |
 |-------|---------|-----------|
 | `REPOS` | All 32 tazama-lf target repos | Receive all workflows except those explicitly excluded |
-| `SPECIFIC_REPOS` | All library repos + `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`case-management-system`, `connection-studio`, `rule-studio`) + multi-image repos (`biar`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
+| `SPECIFIC_REPOS` | All library repos + `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`connection-studio`, `rule-studio`) + custom Docker build repos (`biar`, `case-management-system`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
 | `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`, `library-dependency-rollout.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
 
@@ -347,7 +349,7 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 |-------|----------------------------------|----------------------------------------------------------------------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
 | Dual-container service repo | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
-| Multi-image service repo (biar) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
+| Custom Docker build repo (biar, case-management-system) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`); also add entry to `library-consumers.json` if it will be consumed by other repos |
 | Rule repo - tazama-lf | ❌ No (add to `SPECIFIC_REPOS` + `RULE_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`) |
@@ -358,7 +360,7 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropriate `env` lists:
 
 - **Always**: add to `REPOS`
-- **Other service, dual-container, multi-image, library, or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
+- **Other service, dual-container, custom Docker build, library, or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
 - **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
 - **tazama-lf rule repo**: also add to `RULE_REPOS`
 
@@ -372,7 +374,7 @@ A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.y
 - Stamps the `package-rule-rc.yml` / `package-rule.yml` caller stubs for `RULE_REPOS`.
 - Copies `config-templates/.codacy.yml` to the repo root.
 
-The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are the only workflow files never distributed by sync; they apply solely to dual-container repos and are committed directly there (see [Section 3](#3-dual-container-service-repos-case-management-system-connection-studio-rule-studio)).
+The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are the only workflow files never distributed by sync; they apply solely to dual-container repos and are committed directly there (see [Section 3](#3-dual-container-service-repos-connection-studio-rule-studio)).
 
 ### Step 4 - Open a PR to `dev` in this repo
 

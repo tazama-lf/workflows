@@ -103,6 +103,5 @@ This workflow is **not distributed by sync**. The dual-container repos listed be
 
 | Repository | Reason |
 |-----------|--------|
-| `case-management-system` | Dual-container repo (backend + frontend); canonical single-image workflow cannot represent this |
 | `connection-studio` | Dual-container repo (backend + frontend); canonical single-image workflow cannot represent this |
 | `rule-studio` | Dual-container repo (backend + frontend); canonical single-image workflow cannot represent this |
