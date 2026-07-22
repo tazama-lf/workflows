@@ -330,6 +330,8 @@ jobs:
           REPO="${{ github.repository }}"
           API="https://api.github.com/repos/${REPO}"
           BRANCH="$RELEASE_BRANCH"
+          # Slash in release/vX.Y.Z must be encoded or PATCH/GET refs return Not Found
+          BRANCH_ENC="${BRANCH//\//%2F}"
 
           SOURCE_SHA=$(curl -sS -H "Authorization: Bearer $GH_API_TOKEN" \
             "${API}/git/ref/heads/${SOURCE_BRANCH}" | jq -r '.object.sha')
@@ -349,10 +351,16 @@ jobs:
             echo "Branch $BRANCH created at $SOURCE_SHA"
           else
             echo "Branch $BRANCH already exists - force-resetting to ${SOURCE_BRANCH} HEAD ($SOURCE_SHA)"
-            curl -sS -X PATCH -H "Authorization: Bearer $GH_API_TOKEN" \
+            RESET_MSG=$(curl -sS -X PATCH -H "Authorization: Bearer $GH_API_TOKEN" \
               -H "Content-Type: application/json" \
-              "${API}/git/refs/heads/${BRANCH}" \
-              -d "{\"sha\":\"${SOURCE_SHA}\",\"force\":true}" | jq -r '.ref // .message'
+              "${API}/git/refs/heads/${BRANCH_ENC}" \
+              -d "{\"sha\":\"${SOURCE_SHA}\",\"force\":true}")
+            echo "$RESET_MSG" | jq -r '.ref // .message'
+            if ! echo "$RESET_MSG" | jq -e '.ref' >/dev/null 2>&1; then
+              echo "::error::Failed to force-reset ${BRANCH} (encoded heads/${BRANCH_ENC})"
+              echo "$RESET_MSG"
+              exit 1
+            fi
           fi
 
           BRANCH_SHA="$SOURCE_SHA"
@@ -363,22 +371,54 @@ jobs:
             exit 1
           fi
 
-          # Build tree entries for changed files (package-lock optional)
-          TREE_JSON=$(jq -n \
-            --arg pkg "$(cat package.json)" \
-            '{tree:[{path:"package.json",mode:"100644",type:"blob",content:$pkg}]}')
-          if [ -f package-lock.json ]; then
-            TREE_JSON=$(echo "$TREE_JSON" | jq --arg lock "$(cat package-lock.json)" \
-              '.tree += [{path:"package-lock.json",mode:"100644",type:"blob",content:$lock}]')
+          # Build tree via temp files (package-lock is too large for jq/curl argv — ARG_MAX)
+          TMPDIR_API=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR_API"' EXIT
+
+          create_blob() {
+            local file="$1"
+            local out="$2"
+            jq -n --rawfile content "$file" '{content:$content,encoding:"utf-8"}' > "${out}.req"
+            curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              "${API}/git/blobs" \
+              --data-binary @"${out}.req" | tee "${out}.resp" | jq -r '.sha'
+          }
+
+          PKG_BLOB=$(create_blob package.json "${TMPDIR_API}/pkg")
+          if [ -z "$PKG_BLOB" ] || [ "$PKG_BLOB" = "null" ]; then
+            echo "::error::Failed to create package.json blob"
+            cat "${TMPDIR_API}/pkg.resp" || true
+            exit 1
           fi
+
+          jq -n --arg sha "$PKG_BLOB" \
+            '{tree:[{path:"package.json",mode:"100644",type:"blob",sha:$sha}]}' \
+            > "${TMPDIR_API}/tree.json"
+
+          if [ -f package-lock.json ]; then
+            LOCK_BLOB=$(create_blob package-lock.json "${TMPDIR_API}/lock")
+            if [ -z "$LOCK_BLOB" ] || [ "$LOCK_BLOB" = "null" ]; then
+              echo "::error::Failed to create package-lock.json blob"
+              cat "${TMPDIR_API}/lock.resp" || true
+              exit 1
+            fi
+            jq --arg sha "$LOCK_BLOB" \
+              '.tree += [{path:"package-lock.json",mode:"100644",type:"blob",sha:$sha}]' \
+              "${TMPDIR_API}/tree.json" > "${TMPDIR_API}/tree2.json"
+            mv "${TMPDIR_API}/tree2.json" "${TMPDIR_API}/tree.json"
+          fi
+
+          jq -n --arg base "$TREE_SHA" --slurpfile t "${TMPDIR_API}/tree.json" \
+            '{base_tree:$base, tree:$t[0].tree}' > "${TMPDIR_API}/create-tree.json"
 
           NEW_TREE=$(curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
             -H "Content-Type: application/json" \
             "${API}/git/trees" \
-            -d "$(jq -n --arg base "$TREE_SHA" --argjson tree "$(echo "$TREE_JSON" | jq '.tree')" \
-              '{base_tree:$base, tree:$tree}')" | jq -r '.sha')
+            --data-binary @"${TMPDIR_API}/create-tree.json" | tee "${TMPDIR_API}/tree.resp" | jq -r '.sha')
           if [ -z "$NEW_TREE" ] || [ "$NEW_TREE" = "null" ]; then
             echo "::error::Failed to create new tree via GitHub API"
+            cat "${TMPDIR_API}/tree.resp" || true
             exit 1
           fi
           echo "New tree SHA: $NEW_TREE"
@@ -386,20 +426,23 @@ jobs:
           MSG=$(printf 'chore: prepare platform release v%s (package %s)\n\n- Set package version to %s\n- Resolve internal rc dependencies to stable where required\n- Regenerate package-lock.json when present' \
             "$PLATFORM_VERSION" "$PACKAGE_VERSION" "$PACKAGE_VERSION")
 
+          jq -n --arg msg "$MSG" --arg tree "$NEW_TREE" --arg parent "$BRANCH_SHA" \
+            '{message:$msg, tree:$tree, parents:[$parent]}' > "${TMPDIR_API}/commit.json"
+
           NEW_COMMIT=$(curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
             -H "Content-Type: application/json" \
             "${API}/git/commits" \
-            -d "$(jq -n --arg msg "$MSG" --arg tree "$NEW_TREE" --arg parent "$BRANCH_SHA" \
-              '{message:$msg, tree:$tree, parents:[$parent]}')" | jq -r '.sha')
+            --data-binary @"${TMPDIR_API}/commit.json" | tee "${TMPDIR_API}/commit.resp" | jq -r '.sha')
           if [ -z "$NEW_COMMIT" ] || [ "$NEW_COMMIT" = "null" ]; then
             echo "::error::Failed to create commit via GitHub API"
+            cat "${TMPDIR_API}/commit.resp" || true
             exit 1
           fi
           echo "New commit SHA: $NEW_COMMIT"
 
           curl -sS -X PATCH -H "Authorization: Bearer $GH_API_TOKEN" \
             -H "Content-Type: application/json" \
-            "${API}/git/refs/heads/${BRANCH}" \
+            "${API}/git/refs/heads/${BRANCH_ENC}" \
             -d "{\"sha\":\"${NEW_COMMIT}\"}" | jq -r '.ref // .message'
 
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
