@@ -180,6 +180,15 @@ jobs:
           rm -f temp-workflows/sbom-ci.yml                    # Reusable workflow: called by reference from sbom.yml stub; consumer repos don't need a local copy
           rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
           rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
+          # Release/library workflows and reusable package-rule definitions live only in tazama-lf/workflows.
+          # Product repos receive thin callers (bootstrap) or package-rule stubs stamped below — not full copies.
+          rm -f temp-workflows/dev-to-main-pr.yml
+          rm -f temp-workflows/package-rule.yml
+          rm -f temp-workflows/package-rule-rc.yml
+          rm -f temp-workflows/publish.yml
+          rm -f temp-workflows/release.yml
+          rm -f temp-workflows/release-train.yml
+          rm -f temp-workflows/release-orchestrator.yml
 
           # Helper: check membership in a newline-delimited list (YAML block scalar)
           # Space-delimited single-line vars (SPECIFIC_FILES) use the [[ =~ ]] pattern directly.
