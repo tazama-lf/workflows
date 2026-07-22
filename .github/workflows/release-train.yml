@@ -64,7 +64,9 @@ on:
         default: ""
     secrets:
       GH_TOKEN_LIB:
-        required: true
+        required: false
+      GH_TOKEN_RELEASE:
+        required: false
       GH_USERNAME:
         required: false
 
@@ -125,7 +127,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: ${{ inputs.source_branch || vars.SOURCE_BRANCH || 'dev' }}
-          token: ${{ secrets.GH_TOKEN_LIB }}
+          token: ${{ secrets.GH_TOKEN_RELEASE || secrets.GH_TOKEN_LIB }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -316,11 +318,12 @@ jobs:
 
       # GitHub Git Data API → Verified commits (required by branch protection on many repos).
       # Keep this path; do not replace with a local git commit + force-push.
+      # Needs a token that can create/update branches (GH_TOKEN_RELEASE for release window, else GH_TOKEN_LIB).
       - name: Commit and push release branch via GitHub API
         id: push_branch
         shell: bash
         env:
-          GH_API_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+          GH_API_TOKEN: ${{ secrets.GH_TOKEN_RELEASE || secrets.GH_TOKEN_LIB }}
           SOURCE_BRANCH: ${{ inputs.source_branch || vars.SOURCE_BRANCH || 'dev' }}
           PLATFORM_VERSION: ${{ steps.version.outputs.platform_version }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
@@ -330,48 +333,63 @@ jobs:
           REPO="${{ github.repository }}"
           API="https://api.github.com/repos/${REPO}"
           BRANCH="$RELEASE_BRANCH"
-          # Slash in release/vX.Y.Z must be encoded or PATCH/GET refs return Not Found
-          BRANCH_ENC="${BRANCH//\//%2F}"
+          AUTH=( -H "Authorization: Bearer ${GH_API_TOKEN}" -H "Accept: application/vnd.github+json" )
 
-          SOURCE_SHA=$(curl -sS -H "Authorization: Bearer $GH_API_TOKEN" \
+          if [ -z "${GH_API_TOKEN:-}" ]; then
+            echo "::error::Set GH_TOKEN_RELEASE (preferred) or GH_TOKEN_LIB — token must be able to create/update branches"
+            exit 1
+          fi
+
+          SOURCE_SHA=$(curl -sS "${AUTH[@]}" \
             "${API}/git/ref/heads/${SOURCE_BRANCH}" | jq -r '.object.sha')
           if [ -z "$SOURCE_SHA" ] || [ "$SOURCE_SHA" = "null" ]; then
-            echo "::error::Failed to get ${SOURCE_BRANCH} branch SHA - check GH_TOKEN_LIB permissions"
+            echo "::error::Failed to get ${SOURCE_BRANCH} branch SHA - check token permissions"
             exit 1
           fi
           echo "Source (${SOURCE_BRANCH}) SHA: $SOURCE_SHA"
 
-          # Create release branch; if it exists force-reset to current source HEAD
-          CREATE_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer $GH_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            "${API}/git/refs" \
-            -d "{\"ref\":\"refs/heads/${BRANCH}\",\"sha\":\"${SOURCE_SHA}\"}")
-          if [ "$CREATE_HTTP" = "201" ]; then
-            echo "Branch $BRANCH created at $SOURCE_SHA"
-          else
-            echo "Branch $BRANCH already exists - force-resetting to ${SOURCE_BRANCH} HEAD ($SOURCE_SHA)"
-            RESET_MSG=$(curl -sS -X PATCH -H "Authorization: Bearer $GH_API_TOKEN" \
-              -H "Content-Type: application/json" \
-              "${API}/git/refs/heads/${BRANCH_ENC}" \
-              -d "{\"sha\":\"${SOURCE_SHA}\",\"force\":true}")
-            echo "$RESET_MSG" | jq -r '.ref // .message'
-            if ! echo "$RESET_MSG" | jq -e '.ref' >/dev/null 2>&1; then
-              echo "::error::Failed to force-reset ${BRANCH} (encoded heads/${BRANCH_ENC})"
-              echo "$RESET_MSG"
+          # Ensure release branch points at source HEAD (create, or delete+recreate if it exists).
+          # Slash branches (release/vX.Y.Z): prefer matching-refs + delete/create over PATCH paths.
+          EXISTING_REF=$(curl -sS "${AUTH[@]}" \
+            "${API}/git/matching-refs/heads/${BRANCH}" | jq -r '.[0].ref // empty')
+
+          if [ -n "$EXISTING_REF" ]; then
+            echo "Branch $BRANCH exists ($EXISTING_REF) - deleting then recreating at $SOURCE_SHA"
+            DEL_CODE=$(curl -sS -o /tmp/del-ref.json -w "%{http_code}" -X DELETE "${AUTH[@]}" \
+              "${API}/git/refs/heads/${BRANCH}")
+            # Fallback encoded path if unencoded DELETE 404s
+            if [ "$DEL_CODE" != "204" ] && [ "$DEL_CODE" != "200" ]; then
+              BRANCH_ENC="${BRANCH//\//%2F}"
+              DEL_CODE=$(curl -sS -o /tmp/del-ref.json -w "%{http_code}" -X DELETE "${AUTH[@]}" \
+                "${API}/git/refs/heads/${BRANCH_ENC}")
+            fi
+            if [ "$DEL_CODE" != "204" ] && [ "$DEL_CODE" != "200" ]; then
+              echo "::error::Failed to delete existing ${BRANCH} (HTTP ${DEL_CODE}). Token needs contents:write on this repo."
+              cat /tmp/del-ref.json || true
               exit 1
             fi
           fi
 
+          CREATE_BODY=$(curl -sS -o /tmp/create-ref.json -w "%{http_code}" -X POST "${AUTH[@]}" \
+            -H "Content-Type: application/json" \
+            "${API}/git/refs" \
+            -d "{\"ref\":\"refs/heads/${BRANCH}\",\"sha\":\"${SOURCE_SHA}\"}")
+          if [ "$CREATE_BODY" != "201" ]; then
+            echo "::error::Failed to create ${BRANCH} at ${SOURCE_SHA} (HTTP ${CREATE_BODY})"
+            cat /tmp/create-ref.json || true
+            exit 1
+          fi
+          echo "Branch $BRANCH ready at $SOURCE_SHA"
+
           BRANCH_SHA="$SOURCE_SHA"
-          TREE_SHA=$(curl -sS -H "Authorization: Bearer $GH_API_TOKEN" \
+          TREE_SHA=$(curl -sS "${AUTH[@]}" \
             "${API}/git/commits/${BRANCH_SHA}" | jq -r '.tree.sha')
           if [ -z "$TREE_SHA" ] || [ "$TREE_SHA" = "null" ]; then
             echo "::error::Failed to get tree SHA for commit $BRANCH_SHA"
             exit 1
           fi
 
-          # Build tree via temp files (package-lock is too large for jq/curl argv — ARG_MAX)
+          # Blobs + tree via temp files (avoids ARG_MAX on large package-lock.json)
           TMPDIR_API=$(mktemp -d)
           trap 'rm -rf "$TMPDIR_API"' EXIT
 
@@ -379,7 +397,7 @@ jobs:
             local file="$1"
             local out="$2"
             jq -n --rawfile content "$file" '{content:$content,encoding:"utf-8"}' > "${out}.req"
-            curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
+            curl -sS -X POST "${AUTH[@]}" \
               -H "Content-Type: application/json" \
               "${API}/git/blobs" \
               --data-binary @"${out}.req" | tee "${out}.resp" | jq -r '.sha'
@@ -412,7 +430,7 @@ jobs:
           jq -n --arg base "$TREE_SHA" --slurpfile t "${TMPDIR_API}/tree.json" \
             '{base_tree:$base, tree:$t[0].tree}' > "${TMPDIR_API}/create-tree.json"
 
-          NEW_TREE=$(curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
+          NEW_TREE=$(curl -sS -X POST "${AUTH[@]}" \
             -H "Content-Type: application/json" \
             "${API}/git/trees" \
             --data-binary @"${TMPDIR_API}/create-tree.json" | tee "${TMPDIR_API}/tree.resp" | jq -r '.sha')
@@ -429,7 +447,7 @@ jobs:
           jq -n --arg msg "$MSG" --arg tree "$NEW_TREE" --arg parent "$BRANCH_SHA" \
             '{message:$msg, tree:$tree, parents:[$parent]}' > "${TMPDIR_API}/commit.json"
 
-          NEW_COMMIT=$(curl -sS -X POST -H "Authorization: Bearer $GH_API_TOKEN" \
+          NEW_COMMIT=$(curl -sS -X POST "${AUTH[@]}" \
             -H "Content-Type: application/json" \
             "${API}/git/commits" \
             --data-binary @"${TMPDIR_API}/commit.json" | tee "${TMPDIR_API}/commit.resp" | jq -r '.sha')
@@ -440,18 +458,30 @@ jobs:
           fi
           echo "New commit SHA: $NEW_COMMIT"
 
-          curl -sS -X PATCH -H "Authorization: Bearer $GH_API_TOKEN" \
+          # Point branch at new commit (unencoded path works for slash branches with curl)
+          UPD_CODE=$(curl -sS -o /tmp/upd-ref.json -w "%{http_code}" -X PATCH "${AUTH[@]}" \
             -H "Content-Type: application/json" \
-            "${API}/git/refs/heads/${BRANCH_ENC}" \
-            -d "{\"sha\":\"${NEW_COMMIT}\"}" | jq -r '.ref // .message'
-
+            "${API}/git/refs/heads/${BRANCH}" \
+            -d "{\"sha\":\"${NEW_COMMIT}\",\"force\":true}")
+          if [ "$UPD_CODE" != "200" ]; then
+            BRANCH_ENC="${BRANCH//\//%2F}"
+            UPD_CODE=$(curl -sS -o /tmp/upd-ref.json -w "%{http_code}" -X PATCH "${AUTH[@]}" \
+              -H "Content-Type: application/json" \
+              "${API}/git/refs/heads/${BRANCH_ENC}" \
+              -d "{\"sha\":\"${NEW_COMMIT}\",\"force\":true}")
+          fi
+          if [ "$UPD_CODE" != "200" ]; then
+            echo "::error::Failed to update ${BRANCH} to ${NEW_COMMIT} (HTTP ${UPD_CODE})"
+            cat /tmp/upd-ref.json || true
+            exit 1
+          fi
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "Branch $BRANCH updated to verified commit $NEW_COMMIT"
 
       - name: Open PR to target branch
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN_RELEASE || secrets.GH_TOKEN_LIB }}
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           TARGET_BRANCH: ${{ inputs.target_branch || vars.TARGET_BRANCH || 'main' }}
           REVIEWER_INPUT: ${{ inputs.reviewer || vars.RELEASE_REVIEWER || '' }}
