@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Single manual entry point for platform release waves.
+# Select release_type; walks ordered org-variable lists (REL_LIBS, etc.)
+# and triggers product-repo callers (release-train / dev-to-main-pr).
+# Writes a job Summary with links to all PRs opened (PM source of truth),
+# same idea as Sync Workflows — PR Summary.
+#
+# Install: copy this file to {org}/workflows/.github/workflows/
+#          copy scripts/orchestrate.sh to {org}/workflows/scripts/
+# Repo lists live in org Actions variables — no per-type YAML in the repo.
+#
+# Run from branch: dev
+
+name: Release orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: What to release
+        required: true
+        type: choice
+        options:
+          - libs
+          - services
+          - rules
+          - non-code
+          - all
+      platform_version:
+        description: Platform version (blank = REL_VERSION org var)
+        required: false
+        type: string
+        default: ""
+      wait_publish:
+        description: After each repo, note/wait for publish before dependents (see REL_WAIT_MERGE)
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: Plan only - do not trigger product repos
+        required: false
+        type: boolean
+        default: false
+      repo_filter:
+        description: Optional comma-separated repo subset (order preserved from org list var)
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  orchestrate:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workflows repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Resolve inputs
+        id: cfg
+        env:
+          INPUT_VERSION: ${{ inputs.platform_version }}
+          REL_VERSION: ${{ vars.REL_VERSION }}
+          REL_SOURCE_BRANCH: ${{ vars.REL_SOURCE_BRANCH }}
+          REL_WAIT_PUBLISH: ${{ vars.REL_WAIT_PUBLISH }}
+          REL_WAIT_MERGE: ${{ vars.REL_WAIT_MERGE }}
+          REL_DRY_RUN: ${{ vars.REL_DRY_RUN }}
+          INPUT_WAIT_PUBLISH: ${{ inputs.wait_publish }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          VERSION="${INPUT_VERSION:-}"
+          if [ -z "$VERSION" ]; then
+            VERSION="${REL_VERSION:-}"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::platform_version input and REL_VERSION org variable are both empty"
+            exit 1
+          fi
+          SOURCE_BRANCH="${REL_SOURCE_BRANCH:-dev}"
+          WAIT_PUBLISH="${INPUT_WAIT_PUBLISH:-true}"
+          DRY_RUN="${INPUT_DRY_RUN:-false}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "source_branch=$SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "wait_publish=$WAIT_PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN" >> "$GITHUB_OUTPUT"
+          echo "wait_merge=${REL_WAIT_MERGE:-false}" >> "$GITHUB_OUTPUT"
+          echo "org=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
+
+          echo "Resolved version=$VERSION source_branch=$SOURCE_BRANCH wait_publish=$WAIT_PUBLISH dry_run=$DRY_RUN"
+
+      - name: Run orchestrator
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+          ORG: ${{ steps.cfg.outputs.org }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          PLATFORM_VERSION: ${{ steps.cfg.outputs.version }}
+          SOURCE_BRANCH: ${{ steps.cfg.outputs.source_branch }}
+          WAIT_PUBLISH: ${{ steps.cfg.outputs.wait_publish }}
+          DRY_RUN: ${{ steps.cfg.outputs.dry_run }}
+          REL_WAIT_MERGE: ${{ steps.cfg.outputs.wait_merge }}
+          REPO_FILTER: ${{ inputs.repo_filter }}
+          WAIT_WORKFLOW: "true"
+          # Ordered lists — org variables (left → right = kick-off order)
+          REL_LIBS: ${{ vars.REL_LIBS }}
+          REL_SERVICES: ${{ vars.REL_SERVICES }}
+          REL_RULES: ${{ vars.REL_RULES }}
+          REL_NON_CODE: ${{ vars.REL_NON_CODE }}
+          REL_PACKAGE_SCOPE: ${{ vars.REL_PACKAGE_SCOPE }}
+          TARGET_BRANCH: ${{ vars.REL_TARGET_BRANCH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Secret GH_TOKEN_LIB is required to dispatch workflows in product repos"
+            exit 1
+          fi
+          chmod +x scripts/orchestrate.sh
+          ./scripts/orchestrate.sh
