@@ -1,230 +1,337 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
+# Central reusable workflow: creates a GitHub release/tag for a platform release.
+#
+# GitHub tag uses the platform release version (RELEASE_VERSION / tag_version input).
+# npm package version from package.json is recorded in release notes when present.
+# Repos without package.json use default_version for the platform tag fallback.
 
 name: Release Workflow
 
 on:
+  workflow_call:
+    inputs:
+      tag_version:
+        description: "Platform GitHub release tag version, e.g. 4.0.0"
+        required: false
+        type: string
+        default: ""
+      default_version:
+        description: "Fallback platform version for repos without package.json"
+        required: false
+        type: string
+        default: "4.0.0"
+      expected_version:
+        description: "Deprecated alias for tag_version"
+        required: false
+        type: string
+        default: ""
+      version_policy:
+        description: "aligned requires package.json to match tag_version; independent allows different npm versions"
+        required: false
+        type: string
+        default: "aligned"
+      version_mismatch_behavior:
+        description: "fail or warn when aligned policy package version does not match tag_version"
+        required: false
+        type: string
+        default: "fail"
+      release_branch:
+        description: "Branch to release from"
+        required: false
+        type: string
+        default: "main"
+      milestone_number:
+        description: "Optional GitHub milestone number to include in release notes"
+        required: false
+        type: string
+        default: ""
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
+
+  workflow_dispatch:
+    inputs:
+      tag_version:
+        description: "Platform GitHub release tag version, e.g. 4.0.0"
+        required: false
+        default: ""
+      default_version:
+        description: "Fallback platform version for repos without package.json"
+        required: false
+        default: "4.0.0"
+      expected_version:
+        description: "Deprecated alias for tag_version"
+        required: false
+        default: ""
+      version_policy:
+        description: "aligned or independent"
+        required: false
+        default: "aligned"
+      version_mismatch_behavior:
+        description: "fail or warn"
+        required: false
+        default: "fail"
+      release_branch:
+        description: "Branch to release from"
+        required: false
+        default: "main"
+      milestone_number:
+        description: "Optional GitHub milestone number"
+        required: false
+        default: ""
+
+  # Backward compatibility with existing repository_dispatch triggers.
   repository_dispatch:
     types: [release]
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   release:
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
+
     steps:
-      # Checkout the main branch with all history
-      - name: Checkout Repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2 (upgraded from v2)
-        with:
-          ref: main
-          fetch-depth: 0 # Fetch all tags
-
-      # Determine the release type (major, minor, patch) based on commit messages  
-      - name: Determine Release Type
-        id: determine_release
-        run: |
-          PREV_VERSION=$(git describe --abbrev=0 --tags 2>/dev/null || echo "")
-          echo "Previous Version: ${PREV_VERSION:-none (first release)}"
-          GIT_LOG_RANGE="${PREV_VERSION:+${PREV_VERSION}..}HEAD"
-
-          COMMIT_MESSAGES=$(git log $GIT_LOG_RANGE --format=%B)
-          echo "Commit Messages: $COMMIT_MESSAGES"
-          
-          # Determine release type based on commit messages and labels
-          RELEASE_TYPE="patch"  # Default to patch
-          
-          if echo "$COMMIT_MESSAGES" | grep -q -e "BREAKING CHANGE:"; then
-            RELEASE_TYPE="major"
-          elif echo "$COMMIT_MESSAGES" | grep -q -e "feat!:"; then
-            RELEASE_TYPE="major"
-          elif echo "$COMMIT_MESSAGES" | grep -q -e "feat:"; then
-            RELEASE_TYPE="minor"
-          elif echo "$COMMIT_MESSAGES" | grep -q -e "fix:" -e "enhancement:" -e "docs:" -e "refactor:" -e "chore:" -e "build:" -e "ci:" -e "perf:" -e "style:" -e "test:" -e "chore(deps):" -e "chore(deps-dev):"; then
-            RELEASE_TYPE="patch"
-          fi
-          
-          echo "Release Type: $RELEASE_TYPE"
-          echo "release_type=$RELEASE_TYPE" >> "$GITHUB_OUTPUT"
-        
-      # Bump the version based on the determined release type
-      - name: Bump Version
-        id: bump_version
-        run: |
-          PREV_VERSION=$(git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0")
-          echo "Previous Version: $PREV_VERSION"
-          
-          RELEASE_TYPE=${{ steps.determine_release.outputs.release_type }}
-          echo "Release Type: $RELEASE_TYPE"
-          
-          # Strip the 'v' from the version if it exists
-          PREV_VERSION=${PREV_VERSION#v}
-          
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$PREV_VERSION"
-          
-          if [[ $RELEASE_TYPE == "major" ]]; then
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=0
-          elif [[ $RELEASE_TYPE == "minor" ]]; then
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          else
-            PATCH=$((PATCH + 1))
-          fi
-          
-          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
-          echo "New Version: $NEW_VERSION"
-          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-
-      # Get the milestone details
-      - name: Get Milestone Details
-        id: get_milestone
+      - name: Validate release branch
+        shell: bash
         env:
-          MILESTONE_NUMBER: ${{ github.event.client_payload.milestone_number }}
+          RELEASE_BRANCH: ${{ inputs.release_branch || vars.TARGET_BRANCH || github.event.client_payload.release_branch || 'main' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [[ -z "$MILESTONE_NUMBER" ]]; then
-            echo "::error::MILESTONE_NUMBER is not set in client_payload"
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            echo "::warning::Skipping branch guard for repository_dispatch. Prefer caller workflows for normal releases."
+            exit 0
+          fi
+          if [ "${GITHUB_REF_NAME}" != "$RELEASE_BRANCH" ]; then
+            echo "::error::Release must run from '$RELEASE_BRANCH'. Current branch/ref is '${GITHUB_REF_NAME}'."
+            echo "Run this workflow from the target repo's main branch after the release PR has been merged."
             exit 1
           fi
-          MILESTONE_RESPONSE=$(curl --fail -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/milestones/${MILESTONE_NUMBER}")
-          MILESTONE_TITLE=$(echo "$MILESTONE_RESPONSE" | jq -r '.title')
-          MILESTONE_DESCRIPTION=$(echo "$MILESTONE_RESPONSE" | jq -r '.description')
-          MILESTONE_DATE=$(echo "$MILESTONE_RESPONSE" | jq -r '.due_on')
-          echo "milestone_title=$MILESTONE_TITLE" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ inputs.release_branch || vars.TARGET_BRANCH || github.event.client_payload.release_branch || 'main' }}
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        env:
+          DEFAULT_VERSION: ${{ inputs.default_version || vars.DEFAULT_RELEASE_VERSION || vars.RELEASE_VERSION || github.event.client_payload.default_version || '0.0.0' }}
+          TAG_VERSION_INPUT: ${{ inputs.tag_version || inputs.expected_version || vars.RELEASE_VERSION || vars.DEFAULT_RELEASE_VERSION || github.event.client_payload.expected_version || github.event.client_payload.tag_version || '' }}
+          VERSION_POLICY: ${{ inputs.version_policy || vars.PACKAGE_VERSION_POLICY || 'aligned' }}
+          MISMATCH_BEHAVIOR: ${{ inputs.version_mismatch_behavior || vars.VERSION_MISMATCH_BEHAVIOR || github.event.client_payload.version_mismatch_behavior || 'fail' }}
+        run: |
+          set -euo pipefail
+
+          PACKAGE_RAW=""
+          PACKAGE_VERSION=""
+          if [ -f package.json ]; then
+            PACKAGE_RAW=$(jq -r '.version // empty' package.json)
+            if [ -z "$PACKAGE_RAW" ] || [ "$PACKAGE_RAW" = "null" ]; then
+              echo "::error::package.json exists but .version is missing"
+              exit 1
+            fi
+            PACKAGE_VERSION="${PACKAGE_RAW%%-*}"
+            PACKAGE_VERSION_SOURCE="package.json"
+          else
+            PACKAGE_VERSION_SOURCE="none"
+          fi
+
+          if [ -n "$TAG_VERSION_INPUT" ]; then
+            TAG_VERSION="${TAG_VERSION_INPUT%%-*}"
+            TAG_SOURCE="platform_release"
+          elif [ -n "$PACKAGE_VERSION" ]; then
+            TAG_VERSION="$PACKAGE_VERSION"
+            TAG_SOURCE="package.json"
+          else
+            TAG_VERSION="${DEFAULT_VERSION%%-*}"
+            TAG_SOURCE="default_version"
+          fi
+
+          if ! [[ "$TAG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Resolved platform tag version '$TAG_VERSION' is not valid semver X.Y.Z."
+            exit 1
+          fi
+
+          TAG_NAME="v${TAG_VERSION}"
+
+          if [ "$VERSION_POLICY" = "aligned" ] && [ -n "$PACKAGE_VERSION" ] && [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "::warning::Aligned policy: package.json version '$PACKAGE_RAW' does not match platform tag '$TAG_VERSION'."
+            if [ "$MISMATCH_BEHAVIOR" = "fail" ]; then
+              exit 1
+            fi
+          fi
+
+          echo "raw_version=${PACKAGE_RAW}" >> "$GITHUB_OUTPUT"
+          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_source=$TAG_SOURCE" >> "$GITHUB_OUTPUT"
+          echo "package_version_source=$PACKAGE_VERSION_SOURCE" >> "$GITHUB_OUTPUT"
+
+          echo "Tag source: $TAG_SOURCE"
+          echo "Platform tag: $TAG_NAME"
+          if [ -n "$PACKAGE_RAW" ]; then
+            echo "npm package version: $PACKAGE_RAW"
+          fi
+
+      - name: Check if release tag already exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag_name }}"
+          git fetch --tags --force
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Refusing to recreate release."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::GitHub release $TAG already exists."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Get milestone details
+        id: milestone
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MILESTONE_NUMBER: ${{ inputs.milestone_number || vars.RELEASE_MILESTONE_NUMBER || github.event.client_payload.milestone_number || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MILESTONE_NUMBER" ]; then
+            echo "has_milestone=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RESPONSE=$(gh api "repos/${{ github.repository }}/milestones/${MILESTONE_NUMBER}")
+          TITLE=$(echo "$RESPONSE" | jq -r '.title // empty')
+          DESCRIPTION=$(echo "$RESPONSE" | jq -r '.description // empty')
+          DUE_ON=$(echo "$RESPONSE" | jq -r '.due_on // empty')
+
+          echo "has_milestone=true" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "due_on=$DUE_ON" >> "$GITHUB_OUTPUT"
           {
-            echo 'milestone_description<<EOF'
-            echo "$MILESTONE_DESCRIPTION"
+            echo 'description<<EOF'
+            echo "$DESCRIPTION"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
-          echo "milestone_date=$MILESTONE_DATE" >> "$GITHUB_OUTPUT"
 
-      # Generate the changelog based on commit messages and labels
-      - name: Generate Changelog
-        id: generate_changelog
+      - name: Generate changelog
+        id: changelog
+        shell: bash
         run: |
-          # Generate Changelog Script
-          # Constants
-          CHANGELOG_FILE="/home/runner/work/changelog.txt"
-          LABEL_BUG="fix:"
-          LABEL_FEATURE="feat:"
-          LABEL_ENHANCEMENT="enhancement:"
-          LABEL_DOCS="docs:"
-          LABEL_REFACTOR="refactor:"
-          LABEL_CHORE="chore:"
-          LABEL_BUILD="build:"
-          LABEL_CI="ci:"
-          LABEL_PERFORMANCE="perf:"
-          LABEL_STYLE="style:"
-          LABEL_TEST="test:"
-          LABEL_BREAKING_CHANGE="BREAKING CHANGE:"
-          LABEL_FEAT_BREAKING="feat!:"
-          LABEL_DEPS="chore(deps):"
-          LABEL_DEPS_DEV="chore(deps-dev):"
-          # Get the last release tag
+          set -euo pipefail
+          CHANGELOG_FILE="/tmp/changelog.txt"
           LAST_RELEASE_TAG=$(git describe --abbrev=0 --tags 2>/dev/null || echo "")
           GIT_LOG_RANGE="${LAST_RELEASE_TAG:+${LAST_RELEASE_TAG}..}HEAD"
-          echo "Last Release Tag: ${LAST_RELEASE_TAG:-none (first release)}"
-          # Get the milestone details from the output of the previous step
-          MILESTONE_TITLE="${{ steps.get_milestone.outputs.milestone_title }}"
-          MILESTONE_DESCRIPTION="${{ steps.get_milestone.outputs.milestone_description }}"
-          MILESTONE_DATE="${{ steps.get_milestone.outputs.milestone_date }}"
-          # Append the milestone details to the changelog file
-          echo "## Milestone: $MILESTONE_TITLE" >> "$CHANGELOG_FILE"
-          echo "Date: $MILESTONE_DATE" >> "$CHANGELOG_FILE"
-          echo "Description: $MILESTONE_DESCRIPTION" >> "$CHANGELOG_FILE"
-          echo "" >> "$CHANGELOG_FILE"
-          # Function to append section to the changelog file
-          append_section() {
-            local section_title="$1"
-            local section_label="$2"
-            local section_icon="$3"
-            # Get the commit messages with the specified label between the last release and the current release
-            local commit_messages=$(git log --pretty=format:"- %s (Linked Issues: %C(yellow)%H%Creset)" $GIT_LOG_RANGE --grep="$section_label" --no-merges --decorate --decorate-refs=refs/issues)
-            # If there are commit messages, append the section to the changelog file
-            if [ -n "$commit_messages" ]; then
-              # Remove duplicate commit messages
-              local unique_commit_messages=$(echo "$commit_messages" | awk '!seen[$0]++')
-              echo "### $section_icon $section_title" >> "$CHANGELOG_FILE"
-              echo "" >> "$CHANGELOG_FILE"
-              echo "$unique_commit_messages" >> "$CHANGELOG_FILE"
-              echo "" >> "$CHANGELOG_FILE"
-            fi
-          }
-          # Append sections to the changelog file based on labels
-          append_section "Bug Fixes" "$LABEL_BUG" "🐞"
-          append_section "New Features" "$LABEL_FEATURE" "⭐️"
-          append_section "Enhancements" "$LABEL_ENHANCEMENT" "✨"
-          append_section "Documentation" "$LABEL_DOCS" "📚"
-          append_section "Refactorings" "$LABEL_REFACTOR" "🔨"
-          append_section "Chores" "$LABEL_CHORE" "⚙️"
-          append_section "Build" "$LABEL_BUILD" "🏗️"
-          append_section "CI" "$LABEL_CI" "⚙️"
-          append_section "Performance" "$LABEL_PERFORMANCE" "🚀"
-          append_section "Style" "$LABEL_STYLE" "💅"
-          append_section "Tests" "$LABEL_TEST" "🧪"
-          append_section "Breaking Changes" "$LABEL_BREAKING_CHANGE" "💥"
-          append_section "Feature Breaking Changes" "$LABEL_FEAT_BREAKING" "💥"
-          append_section "Dependencies" "$LABEL_DEPS" "📦"
-          append_section "Dev Dependencies" "$LABEL_DEPS_DEV" "🔧"
-          
-          # Function to append non-labeled commits to the changelog file
-          append_non_labeled_commits() {
-            # Get the commit messages that do not match any conventional commit labels between the last release and the current release
-            local non_labeled_commit_messages=$(git log --pretty=format:"- %s (Linked Issues: %C(yellow)%H%Creset)" $GIT_LOG_RANGE --invert-grep --grep="^fix:\|^feat:\|^enhancement:\|^docs:\|^refactor:\|^chore:\|^build:\|^ci:\|^perf:\|^style:\|^test:\|^BREAKING CHANGE:\|^feat!:\|^chore(deps):\|^chore(deps-dev):")
-            # If there are non-labeled commit messages, append the section to the changelog file
-            if [ -n "$non_labeled_commit_messages" ]; then
-              # Remove duplicate commit messages
-              local unique_commit_messages=$(echo "$non_labeled_commit_messages" | awk '!seen[$0]++')
-              echo "### 📝 Other Changes" >> "$CHANGELOG_FILE"
-              echo "" >> "$CHANGELOG_FILE"
-              echo "$unique_commit_messages" >> "$CHANGELOG_FILE"
-              echo "" >> "$CHANGELOG_FILE"
-            fi
-          }
-          # Append non-labeled commits to the changelog file
-          append_non_labeled_commits
 
-          echo "changelog_file=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
-
-      # Read changelog contents into a variable
-      - name: Read Changelog Contents
-        id: read_changelog
-        run: |
           {
-            echo 'changelog_contents<<EOF'
-            cat /home/runner/work/changelog.txt
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-      
-      # Display changelog
-      - name: Display Changelog
-        run: cat /home/runner/work/changelog.txt
-      
-      # Attach changelog as an artifact
-      - name: Attach Changelog to Release
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+            echo "## Release ${{ steps.version.outputs.tag_name }}"
+            echo ""
+            echo "Repository: ${{ github.repository }}"
+            echo "Platform release tag: ${{ steps.version.outputs.tag_name }}"
+            if [ -n "${{ steps.version.outputs.raw_version }}" ]; then
+              echo "npm package version: ${{ steps.version.outputs.raw_version }}"
+            fi
+            echo "Tag source: ${{ steps.version.outputs.version_source }}"
+            echo "Previous release tag: ${LAST_RELEASE_TAG:-none}"
+            echo ""
+          } > "$CHANGELOG_FILE"
+
+          if [ "${{ steps.milestone.outputs.has_milestone }}" = "true" ]; then
+            {
+              echo "## Milestone: ${{ steps.milestone.outputs.title }}"
+              echo "Due date: ${{ steps.milestone.outputs.due_on }}"
+              echo ""
+              echo "${{ steps.milestone.outputs.description }}"
+              echo ""
+            } >> "$CHANGELOG_FILE"
+          fi
+
+          append_section() {
+            local title="$1"
+            local grep_pattern="$2"
+            local icon="$3"
+            local rows
+            rows=$(git log --pretty=format:'- %s (%h)' $GIT_LOG_RANGE --grep="$grep_pattern" --no-merges || true)
+            if [ -n "$rows" ]; then
+              echo "### $icon $title" >> "$CHANGELOG_FILE"
+              echo "" >> "$CHANGELOG_FILE"
+              echo "$rows" | awk '!seen[$0]++' >> "$CHANGELOG_FILE"
+              echo "" >> "$CHANGELOG_FILE"
+            fi
+          }
+
+          append_section "Bug Fixes" "^fix:" "🐞"
+          append_section "New Features" "^feat:" "⭐️"
+          append_section "Enhancements" "^enhancement:" "✨"
+          append_section "Documentation" "^docs:" "📚"
+          append_section "Refactorings" "^refactor:" "🔨"
+          append_section "Chores" "^chore:" "⚙️"
+          append_section "Build" "^build:" "🏗️"
+          append_section "CI" "^ci:" "⚙️"
+          append_section "Performance" "^perf:" "🚀"
+          append_section "Style" "^style:" "💅"
+          append_section "Tests" "^test:" "🧪"
+          append_section "Breaking Changes" "BREAKING CHANGE:\|^feat!:" "💥"
+          append_section "Dependencies" "^chore(deps):\|^chore(deps-dev):" "📦"
+
+          OTHER=$(git log --pretty=format:'- %s (%h)' $GIT_LOG_RANGE --invert-grep --grep='^fix:\|^feat:\|^enhancement:\|^docs:\|^refactor:\|^chore:\|^build:\|^ci:\|^perf:\|^style:\|^test:\|BREAKING CHANGE:\|^feat!:\|^chore(deps):\|^chore(deps-dev):' --no-merges || true)
+          if [ -n "$OTHER" ]; then
+            echo "### 📝 Other Changes" >> "$CHANGELOG_FILE"
+            echo "" >> "$CHANGELOG_FILE"
+            echo "$OTHER" | awk '!seen[$0]++' >> "$CHANGELOG_FILE"
+            echo "" >> "$CHANGELOG_FILE"
+          fi
+
+          cat "$CHANGELOG_FILE"
+          echo "file=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: Changelog
-          path: /home/runner/work/changelog.txt
-      
-      # Create release while including the changelog
-      - name: Create Release
+          name: changelog-${{ steps.version.outputs.tag_name }}
+          path: ${{ steps.changelog.outputs.file }}
+
+      - name: Create GitHub release
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ steps.bump_version.outputs.new_version }}" \
-            --title "${{ steps.bump_version.outputs.new_version }}" \
-            --notes-file /home/runner/work/changelog.txt
+          set -euo pipefail
+          gh release create "${{ steps.version.outputs.tag_name }}" \
+            --title "${{ steps.version.outputs.tag_name }}" \
+            --notes-file "${{ steps.changelog.outputs.file }}"
 
       - name: Resolve source PR
         id: src_pr
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          PR_URL=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].html_url // empty' 2>/dev/null || true)
+          set -euo pipefail
+
+          PR_URL=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+            --jq '.[0].html_url // empty' 2>/dev/null || true)
+
           echo "PR_URL=${PR_URL}" >> "$GITHUB_OUTPUT"
+          if [ -n "$PR_URL" ]; then
+            echo "Source PR: $PR_URL"
+          else
+            echo "No source PR found for commit ${GITHUB_SHA}."
+          fi
 
       - name: Send Slack Notification
         if: always()
@@ -232,8 +339,8 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SERVICE_NAME: ${{ github.repository }}
-          RELEASE_TAG: ${{ steps.bump_version.outputs.new_version }}
-          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.bump_version.outputs.new_version }}
+          IMAGE_REPOSITORY: ${{ steps.version.outputs.tag_name }}
+          IMAGE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag_name }}
           PR_URL: ${{ steps.src_pr.outputs.PR_URL }}
           JOB_STATUS: ${{ job.status }}
           BRANCH_NAME: ${{ github.ref_name }}
@@ -242,4 +349,4 @@ jobs:
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && echo "SLACK_WEBHOOK_URL is not configured. Skipping Slack notification." && exit 0
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "New Release Alert :tazama:" || echo "Release failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg release "$RELEASE_TAG" --arg release_url "$RELEASE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Github Repository:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Release:*\n`"+$release+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*Release notes:*\n<"+$release_url+"|Open release>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"
+          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "GitHub release created :ship:" || echo "GitHub release failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg image "$IMAGE_REPOSITORY" --arg image_url "$IMAGE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Service:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Release:*\n`"+$image+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*GitHub Release:*\n<"+$image_url+"|Open release>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"

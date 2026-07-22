@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Central reusable workflow: opens a PR from dev to main.
+# Use this for non-package/non-code repos, or for repos that do not need package.json changes.
+
+name: Dev to Main PR
+
+on:
+  workflow_call:
+    inputs:
+      source_branch:
+        required: false
+        type: string
+        default: dev
+      target_branch:
+        required: false
+        type: string
+        default: main
+      release_version:
+        required: false
+        type: string
+        default: ""
+      reviewer:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      GH_TOKEN_LIB:
+        required: false
+      GH_USERNAME:
+        required: false
+
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        required: false
+        default: dev
+      target_branch:
+        required: false
+        default: main
+      release_version:
+        required: false
+        default: ""
+      reviewer:
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB || github.token }}
+          SOURCE_BRANCH: ${{ inputs.source_branch || vars.SOURCE_BRANCH || 'dev' }}
+          TARGET_BRANCH: ${{ inputs.target_branch || vars.TARGET_BRANCH || 'main' }}
+          RELEASE_VERSION: ${{ inputs.release_version || vars.RELEASE_VERSION || vars.DEFAULT_RELEASE_VERSION || '' }}
+          REVIEWER_INPUT: ${{ inputs.reviewer || vars.RELEASE_REVIEWER || '' }}
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+        run: |
+          set -euo pipefail
+          BRANCH_TITLE="${SOURCE_BRANCH} → ${TARGET_BRANCH}"
+          if [ -n "$RELEASE_VERSION" ]; then
+            TITLE="release: v${RELEASE_VERSION}"
+          else
+            TITLE="release: merge ${BRANCH_TITLE}"
+          fi
+
+          printf "## Release preparation\n\nThis PR was created automatically to merge `%s` into `%s`.\n\nPlease review and approve before merging.\n" \
+            "$SOURCE_BRANCH" "$TARGET_BRANCH" > /tmp/pr-body.md
+
+          EXISTING=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "$SOURCE_BRANCH" \
+            --base "$TARGET_BRANCH" \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists for ${SOURCE_BRANCH} -> ${TARGET_BRANCH}."
+            exit 0
+          fi
+
+          REVIEWER="${REVIEWER_INPUT:-${GH_USERNAME:-}}"
+          REVIEWER_ARGS=()
+          if [ -n "$REVIEWER" ]; then
+            REVIEWER_ARGS=(--reviewer "$REVIEWER")
+          fi
+
+          gh pr create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file /tmp/pr-body.md \
+            --base "$TARGET_BRANCH" \
+            --head "$SOURCE_BRANCH" \
+            "${REVIEWER_ARGS[@]}"

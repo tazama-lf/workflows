@@ -1,102 +1,208 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# This workflow publishes an npm package to the GitHub Package Registry (@tazama-lf scope).
-#
-# Versioning policy:
-#   The version in package.json is the only signal used to determine the dist-tag:
-#     - Prerelease (X.Y.Z-rc.N)  → published under the 'rc' dist-tag  (triggered manually from dev)
-#     - Stable (X.Y.Z)           → published under 'latest' dist-tag   (triggered automatically on merge to main)
-#
-#   Developers set the version in package.json manually. The version-check.yml workflow
-#   enforces that no prerelease version can merge to main.
-#
-# Resolves: https://github.com/tazama-lf/workflows/issues/27
-#
-# Please do not attempt to edit this flow without the direct consent from the DevOps team.
-# This file is managed centrally.
+# Central reusable workflow: publishes npm packages to GitHub Packages.
+# Prerelease versions publish with dist-tag rc; stable versions publish with latest.
 
 name: Publish npm package to GitHub Packages
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+        default: "22"
+      package_scope:
+        required: false
+        type: string
+        default: "@frmscoe"
+      run_build:
+        required: false
+        type: boolean
+        default: true
+      build_command:
+        required: false
+        type: string
+        default: "npm run build"
+      skip_if_already_published:
+        required: false
+        type: boolean
+        default: true
+      publish_branch:
+        description: "Branch allowed to publish from"
+        required: false
+        type: string
+        default: "main"
+    secrets:
+      GH_TOKEN_LIB:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+
   workflow_dispatch:
+    inputs:
+      node_version:
+        required: false
+        default: "22"
+      package_scope:
+        required: false
+        default: "@frmscoe"
+      run_build:
+        required: false
+        type: boolean
+        default: true
+      build_command:
+        required: false
+        default: "npm run build"
+      skip_if_already_published:
+        required: false
+        type: boolean
+        default: true
+      publish_branch:
+        description: "Branch allowed to publish from"
+        required: false
+        default: "main"
+
+permissions:
+  packages: write
+  contents: read
+  pull-requests: read
 
 jobs:
   build-and-publish:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
     steps:
+      - name: Validate publish branch
+        shell: bash
+        env:
+          PUBLISH_BRANCH: ${{ inputs.publish_branch || vars.TARGET_BRANCH || 'main' }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_NAME}" != "$PUBLISH_BRANCH" ]; then
+            echo "::error::Publish must run from '$PUBLISH_BRANCH'. Current branch/ref is '${GITHUB_REF_NAME}'."
+            echo "Run this workflow from the target repo's main branch after the release PR has been merged."
+            exit 1
+          fi
+
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           token: ${{ secrets.GH_TOKEN_LIB }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
-          node-version: '22'
+          node-version: ${{ inputs.node_version || vars.NODE_VERSION || '22' }}
           registry-url: 'https://npm.pkg.github.com/'
-          scope: '@tazama-lf'
+          scope: ${{ inputs.package_scope || vars.PACKAGE_SCOPE || '@frmscoe' }}
 
       - name: Set up npm authentication
-        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN_LIB }}" >> ~/.npmrc
-
-      - name: Install dependencies
-        run: npm ci
+        shell: bash
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
-
-      - name: Build
-        run: npm run build
-
-      - name: Publish package
+          GH_TOKEN_LIB: ${{ secrets.GH_TOKEN_LIB }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if [[ "$VERSION" == *-* ]]; then
-            # Prerelease version (e.g. 1.2.3-rc.1): publish under the 'rc' dist-tag
-            # so it does not become the default 'latest' install target.
-            npm publish --tag rc
-          else
-            npm publish
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+          set -euo pipefail
+          echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN_LIB}" >> ~/.npmrc
+          echo "@frmscoe:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+          echo "@tazama-lf:registry=https://npm.pkg.github.com/" >> ~/.npmrc
 
-      - name: Read package metadata
+      - name: Resolve package identity
         id: pkg
-        if: always()
+        shell: bash
         run: |
-          NAME=$(node -p "require('./package.json').name")
-          VERSION=$(node -p "require('./package.json').version")
-          if [[ "$VERSION" == *-* ]]; then DIST_TAG="rc"; else DIST_TAG="latest"; fi
+          set -euo pipefail
+          NAME=$(jq -r '.name // empty' package.json)
+          VERSION=$(jq -r '.version // empty' package.json)
+          if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
+            echo "::error::package.json must contain name and version"
+            exit 1
+          fi
+          if [[ "$VERSION" == *-* ]]; then
+            DIST_TAG="rc"
+          else
+            DIST_TAG="latest"
+          fi
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Package: $NAME@$VERSION ($DIST_TAG)"
+
+      - name: Check if already published
+        id: published
+        if: ${{ inputs.skip_if_already_published }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+        run: |
+          set -euo pipefail
+          NAME="${{ steps.pkg.outputs.name }}"
+          VERSION="${{ steps.pkg.outputs.version }}"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::${NAME}@${VERSION} already exists. Skipping publish."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: ${{ steps.published.outputs.exists != 'true' }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build
+        if: ${{ inputs.run_build && steps.published.outputs.exists != 'true' }}
+        shell: bash
+        run: ${{ inputs.build_command || vars.BUILD_COMMAND || 'npm run build' }}
+
+      - name: Publish package
+        if: ${{ steps.published.outputs.exists != 'true' }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+        run: |
+          set -euo pipefail
+          npm publish --tag "${{ steps.pkg.outputs.dist_tag }}"
 
       - name: Resolve source PR
         id: src_pr
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          PR_URL=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].html_url // empty' 2>/dev/null || true)
-          echo "PR_URL=${PR_URL}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      # Send Slack notification - requires SLACK_WEBHOOK_URL org/repo secret
-      - name: Send Slack notification
-        if: always()
+          PR_URL=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+            --jq '.[0].html_url // empty' 2>/dev/null || true)
+
+          echo "PR_URL=${PR_URL}" >> "$GITHUB_OUTPUT"
+          if [ -n "$PR_URL" ]; then
+            echo "Source PR: $PR_URL"
+          else
+            echo "No source PR found for commit ${GITHUB_SHA}."
+          fi
+
+      - name: Send Slack Notification
+        if: always() && steps.published.outputs.exists != 'true'
         continue-on-error: true
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SERVICE_NAME: ${{ steps.pkg.outputs.name }}
-          PACKAGE_REF: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }} (${{ steps.pkg.outputs.dist_tag }})
-          PACKAGE_URL: https://github.com/${{ github.repository }}/packages
+          IMAGE_REPOSITORY: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}
+          IMAGE_URL: https://github.com/${{ github.repository }}/packages
           PR_URL: ${{ steps.src_pr.outputs.PR_URL }}
+          DIST_TAG: ${{ steps.pkg.outputs.dist_tag }}
           JOB_STATUS: ${{ job.status }}
           BRANCH_NAME: ${{ github.ref_name }}
           COMMIT_SHA: ${{ github.sha }}
@@ -104,4 +210,4 @@ jobs:
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && echo "SLACK_WEBHOOK_URL is not configured. Skipping Slack notification." && exit 0
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "New npm package published :white_check_mark:" || echo "npm package publish failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg pkg "$PACKAGE_REF" --arg pkg_url "$PACKAGE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Service:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Package:*\n`"+$pkg+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*GitHub Packages:*\n<"+$pkg_url+"|Open packages>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"
+          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "npm package published :ship:" || echo "npm package publish failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg image "${IMAGE_REPOSITORY} (${DIST_TAG})" --arg image_url "$IMAGE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Service:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Package:*\n`"+$image+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*GitHub Packages:*\n<"+$image_url+"|Open packages>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"

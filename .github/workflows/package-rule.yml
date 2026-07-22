@@ -29,6 +29,7 @@ name: Rule Executer - Rule processor stable automation (reusable)
 
 permissions:
   contents: read
+  pull-requests: read
 
 on:
   workflow_call:
@@ -41,6 +42,26 @@ on:
         description: 'GitHub org that owns the rule repo ("tazama-lf" or "frmscoe")'
         required: true
         type: string
+      node_version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '22'
+      rule_executer_repo:
+        description: 'Owner/repo for the rule-executer template repository'
+        required: false
+        type: string
+        default: 'tazama-lf/rule-executer'
+      rule_executer_branch:
+        description: 'Branch of the rule-executer template repository'
+        required: false
+        type: string
+        default: 'main'
+      docker_image_namespace:
+        description: 'Docker image namespace/org, e.g. tazamaorg'
+        required: false
+        type: string
+        default: 'tazamaorg'
     secrets:
       GH_TOKEN_LIB:
         required: true
@@ -55,6 +76,10 @@ jobs:
   automate-rule-executer:
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: rule-${{ inputs.rule_number }}
+      IMAGE_REPOSITORY: ${{ inputs.docker_image_namespace }}/rule-${{ inputs.rule_number }}
+      IMAGE_URL: https://hub.docker.com/r/${{ inputs.docker_image_namespace }}/rule-${{ inputs.rule_number }}
 
     steps:
       - name: Checkout rule repository
@@ -63,7 +88,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
         with:
-          node-version: '22'
+          node-version: ${{ inputs.node_version || vars.NODE_VERSION || '22' }}
 
       - name: Read rule version from package.json
         id: rule_version
@@ -84,7 +109,7 @@ jobs:
       - name: Clone Rule Executer repository (main branch)
         run: |
           git config --global url."https://x-access-token:${GH_TOKEN_LIB}@github.com/".insteadOf "https://github.com/"
-          git clone https://github.com/tazama-lf/rule-executer -b main rule-executer
+          git clone "https://github.com/${{ inputs.rule_executer_repo }}" -b "${{ inputs.rule_executer_branch }}" rule-executer
           echo "Rule Executer clone complete."
         env:
           GH_TOKEN_LIB: ${{ secrets.GH_TOKEN_LIB }}
@@ -149,6 +174,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd "rule-executer-${{ inputs.rule_number }}"
+          rm -f package-lock.json
           npm install
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
@@ -158,15 +184,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          TARGET_BRANCH: ${{ vars.TARGET_BRANCH || 'main' }}
         run: |
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::Stable images must be published from main. Refusing to push from $GITHUB_REF."
+          if [[ "$GITHUB_REF" != "refs/heads/${TARGET_BRANCH}" ]]; then
+            echo "::error::Stable images must be published from ${TARGET_BRANCH}. Refusing to push from $GITHUB_REF."
             exit 1
           fi
 
           VERSION="${{ steps.rule_version.outputs.VERSION }}"
           RULE_NUM="${{ inputs.rule_number }}"
-          IMAGE="tazamaorg/rule-${RULE_NUM}"
+          IMAGE="${{ inputs.docker_image_namespace }}/rule-${RULE_NUM}"
 
           echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
 
@@ -187,19 +214,30 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          PR_URL=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[0].html_url // empty' 2>/dev/null || true)
-          echo "PR_URL=${PR_URL}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      - name: Send Slack notification
+          PR_URL=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+            --jq '.[0].html_url // empty' 2>/dev/null || true)
+
+          echo "PR_URL=${PR_URL}" >> "$GITHUB_OUTPUT"
+          if [ -n "$PR_URL" ]; then
+            echo "Source PR: $PR_URL"
+          else
+            echo "No source PR found for commit ${GITHUB_SHA}."
+          fi
+
+      - name: Send Slack Notification
         if: always()
         continue-on-error: true
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SERVICE_NAME: rule-${{ inputs.rule_number }}
-          IMAGE_REPOSITORY: tazamaorg/rule-${{ inputs.rule_number }}:latest
-          IMAGE_URL: https://hub.docker.com/r/tazamaorg/rule-${{ inputs.rule_number }}
-          RULE_VERSION: ${{ steps.rule_version.outputs.VERSION }}
+          SERVICE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+          IMAGE_URL: ${{ env.IMAGE_URL }}
           PR_URL: ${{ steps.src_pr.outputs.PR_URL }}
           JOB_STATUS: ${{ job.status }}
           BRANCH_NAME: ${{ github.ref_name }}
@@ -208,4 +246,4 @@ jobs:
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && echo "SLACK_WEBHOOK_URL is not configured. Skipping Slack notification." && exit 0
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "New Rule stable Docker image published :white_check_mark:" || echo "Rule stable Docker image build failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg version "$RULE_VERSION" --arg image "$IMAGE_REPOSITORY" --arg image_url "$IMAGE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Rule:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Version:*\n`"+$version+"`")},{type:"mrkdwn",text:("*Image:*\n`"+$image+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*DockerHub:*\n<"+$image_url+"|Open image>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"
+          curl --fail-with-body -sS -X POST -H 'Content-type: application/json' --data "$(jq -n --arg title "$([ "$JOB_STATUS" = "success" ] && echo "DockerHub stable image published :ship:" || echo "DockerHub stable image build failed :x:")" --arg service "$SERVICE_NAME" --arg status "$JOB_STATUS" --arg image "$IMAGE_REPOSITORY:latest" --arg image_url "$IMAGE_URL" --arg branch "$BRANCH_NAME" --arg sha "$SHORT_SHA" --arg pr "$PR_URL" --arg run "$RUN_URL" '{blocks:[{type:"header",text:{type:"plain_text",text:$title,emoji:true}},{type:"section",fields:([{type:"mrkdwn",text:("*Service:*\n"+$service)},{type:"mrkdwn",text:("*Status:*\n"+$status)},{type:"mrkdwn",text:("*Image:*\n`"+$image+"`")},{type:"mrkdwn",text:("*Branch:*\n`"+$branch+"`")},{type:"mrkdwn",text:("*Commit:*\n`"+$sha+"`")},{type:"mrkdwn",text:("*DockerHub:*\n<"+$image_url+"|Open image>")},{type:"mrkdwn",text:("*Workflow Run:*\n<"+$run+"|Open run>")}]+(if $pr != "" then [{type:"mrkdwn",text:("*Source PR:*\n<"+$pr+"|Open PR>")}] else [] end))}]}')" "$SLACK_WEBHOOK_URL"
