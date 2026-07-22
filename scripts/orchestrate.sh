@@ -290,12 +290,36 @@ wait_for_latest_run() {
   fi
 
   log "  -> watching run $run_id (timeout ${RUN_TIMEOUT}s)"
-  if ! gh run watch "$run_id" -R "$full_repo" --exit-status --interval 10; then
-    err "Workflow run $run_id failed for $full_repo"
-    gh run view "$run_id" -R "$full_repo" --log-failed 2>/dev/null | tail -n 80 || true
+  local watch_rc=0
+  timeout "${RUN_TIMEOUT}" gh run watch "$run_id" -R "$full_repo" --exit-status --interval 10 || watch_rc=$?
+  if [ "$watch_rc" -ne 0 ]; then
+    if [ "$watch_rc" -eq 124 ]; then
+      err "Workflow run $run_id timed out after ${RUN_TIMEOUT}s for $full_repo"
+    else
+      err "Workflow run $run_id failed for $full_repo"
+      gh run view "$run_id" -R "$full_repo" --log-failed 2>/dev/null | tail -n 80 || true
+    fi
     return 1
   fi
   log "  -> run $run_id succeeded"
+}
+
+# GitHub Packages auth for npm view (scopes publish to npm.pkg.github.com, not registry.npmjs.org)
+ensure_github_packages_npmrc() {
+  if [ "${_GHP_NPMRC_READY:-}" = "1" ]; then
+    return 0
+  fi
+  local token="${GH_TOKEN:-${NODE_AUTH_TOKEN:-}}"
+  if [ -z "$token" ]; then
+    err "GH_TOKEN (or NODE_AUTH_TOKEN) is required to query GitHub Packages"
+    return 1
+  fi
+  {
+    echo "//npm.pkg.github.com/:_authToken=${token}"
+    echo "@frmscoe:registry=https://npm.pkg.github.com/"
+    echo "@tazama-lf:registry=https://npm.pkg.github.com/"
+  } >> "${HOME}/.npmrc"
+  _GHP_NPMRC_READY=1
 }
 
 wait_for_npm_latest() {
@@ -305,19 +329,21 @@ wait_for_npm_latest() {
     return 0
   fi
 
-  log "  -> waiting for npm $npm_name latest stable (timeout ${PUBLISH_TIMEOUT}s)"
+  ensure_github_packages_npmrc || return 1
+
+  log "  -> waiting for GitHub Packages $npm_name latest stable (timeout ${PUBLISH_TIMEOUT}s)"
   local elapsed=0
   while [ "$elapsed" -lt "$PUBLISH_TIMEOUT" ]; do
     local ver=""
-    ver="$(npm view "$npm_name" dist-tags.latest 2>/dev/null || true)"
+    ver="$(npm view "$npm_name" dist-tags.latest --registry https://npm.pkg.github.com/ 2>/dev/null || true)"
     if [ -n "$ver" ] && [[ "$ver" != *-* ]]; then
-      log "  -> npm $npm_name@${ver} (latest) visible"
+      log "  -> npm $npm_name@${ver} (latest) visible on GitHub Packages"
       return 0
     fi
     sleep "$PUBLISH_POLL"
     elapsed=$((elapsed + PUBLISH_POLL))
   done
-  err "Timed out waiting for stable latest of $npm_name"
+  err "Timed out waiting for stable latest of $npm_name on GitHub Packages"
   return 1
 }
 
