@@ -239,6 +239,8 @@ jobs:
         id: resolve_deps
         shell: bash
         env:
+          # Project .npmrc uses ${GH_TOKEN}; NODE_AUTH_TOKEN alone is shadowed
+          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
           NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
           INTERNAL_SCOPES_REGEX: ${{ inputs.internal_scopes_regex || vars.INTERNAL_SCOPES_REGEX || '^@(tazama-lf|frmscoe)/' }}
         run: |
@@ -305,6 +307,7 @@ jobs:
       - name: Regenerate package-lock.json if present
         shell: bash
         env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
           NODE_AUTH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
           HUSKY: "0"
         run: |
