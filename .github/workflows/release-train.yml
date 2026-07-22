@@ -352,25 +352,30 @@ jobs:
           echo "Source (${SOURCE_BRANCH}) SHA: $SOURCE_SHA"
 
           # Ensure release branch points at source HEAD (create, or delete+recreate if it exists).
-          # Slash branches (release/vX.Y.Z): prefer matching-refs + delete/create over PATCH paths.
+          # matching-refs is PREFIX-based: release/v4.0.0 also matches release/v4.0.0-workflows-align.
+          # Require an exact refs/heads/$BRANCH match before delete.
+          WANT_REF="refs/heads/${BRANCH}"
           EXISTING_REF=$(curl -sS "${AUTH[@]}" \
-            "${API}/git/matching-refs/heads/${BRANCH}" | jq -r '.[0].ref // empty')
+            "${API}/git/matching-refs/heads/${BRANCH}" \
+            | jq -r --arg want "$WANT_REF" '.[] | select(.ref == $want) | .ref' \
+            | head -n1)
 
           if [ -n "$EXISTING_REF" ]; then
             echo "Branch $BRANCH exists ($EXISTING_REF) - deleting then recreating at $SOURCE_SHA"
+            BRANCH_ENC="${BRANCH//\//%2F}"
             DEL_CODE=$(curl -sS -o /tmp/del-ref.json -w "%{http_code}" -X DELETE "${AUTH[@]}" \
-              "${API}/git/refs/heads/${BRANCH}")
-            # Fallback encoded path if unencoded DELETE 404s
+              "${API}/git/refs/heads/${BRANCH_ENC}")
             if [ "$DEL_CODE" != "204" ] && [ "$DEL_CODE" != "200" ]; then
-              BRANCH_ENC="${BRANCH//\//%2F}"
               DEL_CODE=$(curl -sS -o /tmp/del-ref.json -w "%{http_code}" -X DELETE "${AUTH[@]}" \
-                "${API}/git/refs/heads/${BRANCH_ENC}")
+                "${API}/git/refs/heads/${BRANCH}")
             fi
             if [ "$DEL_CODE" != "204" ] && [ "$DEL_CODE" != "200" ]; then
               echo "::error::Failed to delete existing ${BRANCH} (HTTP ${DEL_CODE}). Token needs contents:write on this repo."
               cat /tmp/del-ref.json || true
               exit 1
             fi
+          else
+            echo "Branch $BRANCH does not exist (ignoring prefix matches like ${BRANCH}-*) — will create"
           fi
 
           CREATE_BODY=$(curl -sS -o /tmp/create-ref.json -w "%{http_code}" -X POST "${AUTH[@]}" \
