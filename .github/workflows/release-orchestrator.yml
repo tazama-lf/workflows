@@ -96,7 +96,8 @@ jobs:
 
       - name: Run orchestrator
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN_LIB }}
+          # Prefer short-lived GH_TOKEN_RELEASE (elevated for release window); fall back to day-to-day GH_TOKEN_LIB
+          GH_TOKEN: ${{ secrets.GH_TOKEN_RELEASE || secrets.GH_TOKEN_LIB }}
           ORG: ${{ steps.cfg.outputs.org }}
           RELEASE_TYPE: ${{ inputs.release_type }}
           PLATFORM_VERSION: ${{ steps.cfg.outputs.version }}
@@ -116,7 +117,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::Secret GH_TOKEN_LIB is required to dispatch workflows in product repos"
+            echo "::error::Set org secret GH_TOKEN_RELEASE (preferred for release window) or GH_TOKEN_LIB"
             exit 1
           fi
           chmod +x scripts/orchestrate.sh
