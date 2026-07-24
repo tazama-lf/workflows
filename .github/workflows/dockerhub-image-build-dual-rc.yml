@@ -11,16 +11,33 @@
 
 # Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
 
-# This workflow is for repositories that produce two Docker images: a backend and a frontend.
-# Each image is built from its own subdirectory (./backend and ./frontend).
-# RC images are tagged with the floating alias "rc" rather than the package version.
+# Reusable workflow: builds and pushes RC Docker images for a dual-container repo
+# (backend + frontend). Each image is built from its own subdirectory (./backend and
+# ./frontend). RC images are tagged with the floating alias "rc" rather than the package version.
+#
+# Dual-container repos (DUAL_REPOS in sync-workflows.yml) receive a caller stub of the
+# same filename stamped by sync rather than maintaining a full copy of this definition.
+#
+# Caller stub example (stamped into each dual repo's .github/workflows/dockerhub-image-build-dual-rc.yml):
+#
+#   on:
+#     push:
+#       branches: [ "dev" ]
+#     workflow_dispatch:
+#   jobs:
+#     build:
+#       permissions:
+#         packages: write
+#         contents: read
+#         attestations: write
+#         id-token: write
+#       uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual-rc.yml@dev
+#       secrets: inherit
 
 name: Publish Docker images RC (dual)
 
 on:
-  push:
-    branches: [ "dev" ]
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   push_backend_rc:

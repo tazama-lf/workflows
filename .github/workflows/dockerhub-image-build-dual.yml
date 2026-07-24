@@ -11,18 +11,36 @@
 
 # Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
 
-# This workflow is for repositories that produce two Docker images: a backend and a frontend.
-# Each image is built from its own subdirectory (./backend and ./frontend). Both images are
-# versioned from the ROOT package.json - the single platform version stamped by the release train.
+# Reusable workflow: builds and pushes stable Docker images for a dual-container repo
+# (backend + frontend). Each image is built from its own subdirectory (./backend and
+# ./frontend). Both images are versioned from the ROOT package.json - the single platform
+# version stamped by the release train - and additionally tagged :latest.
+#
+# Dual-container repos (DUAL_REPOS in sync-workflows.yml) receive a caller stub of the
+# same filename stamped by sync rather than maintaining a full copy of this definition.
+#
+# Caller stub example (stamped into each dual repo's .github/workflows/dockerhub-image-build-dual.yml):
+#
+#   on:
+#     push:
+#       branches: [ "main" ]
+#     release:
+#       types: [published]
+#     workflow_dispatch:
+#   jobs:
+#     build:
+#       permissions:
+#         packages: write
+#         contents: read
+#         attestations: write
+#         id-token: write
+#       uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual.yml@v1
+#       secrets: inherit
 
 name: Publish Docker images (dual)
 
 on:
-  push:
-    branches: [ "main" ]
-  release:
-    types: [published]
-  workflow_dispatch:
+  workflow_call:
 
 jobs:
   push_backend:
