@@ -12,8 +12,8 @@
 # Please do not attempt to edit this flow without the direct consent from the DevOps team. This file is managed centrally.
 
 # This workflow is for repositories that produce two Docker images: a backend and a frontend.
-# Each image is built from its own subdirectory (./backend and ./frontend) and versioned
-# independently from its own package.json.
+# Each image is built from its own subdirectory (./backend and ./frontend). Both images are
+# versioned from the ROOT package.json - the single platform version stamped by the release train.
 
 name: Publish Docker images (dual)
 
@@ -22,6 +22,7 @@ on:
     branches: [ "main" ]
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   push_backend:
@@ -47,9 +48,9 @@ jobs:
         run: |
           echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
 
-      - name: Get backend package version
+      - name: Get package version
         id: pkg_version
-        run: echo "VERSION=$(node -p "require('./backend/package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -58,6 +59,7 @@ jobs:
           images: tazamaorg/${{ env.REPO_NAME }}-backend
           tags: |
             type=raw,value=${{ steps.pkg_version.outputs.VERSION }}
+            type=raw,value=latest
 
       - name: Build and push backend Docker image
         id: push
@@ -128,9 +130,9 @@ jobs:
         run: |
           echo "REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}" >> $GITHUB_ENV
 
-      - name: Get frontend package version
+      - name: Get package version
         id: pkg_version
-        run: echo "VERSION=$(node -p "require('./frontend/package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -139,6 +141,7 @@ jobs:
           images: tazamaorg/${{ env.REPO_NAME }}-frontend
           tags: |
             type=raw,value=${{ steps.pkg_version.outputs.VERSION }}
+            type=raw,value=latest
 
       - name: Build and push frontend Docker image
         id: push
