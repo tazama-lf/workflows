@@ -55,7 +55,7 @@ Each repository in the Tazama ecosystem belongs to one class. The class determin
 | Class | Repos | Output | Notes |
 |-------|-------|--------|-------|
 | **Service repos** | `auth-service`, `typology-processor`, `event-director`, `event-flow`, `event-sidecar`, `lumberjack`, `nats-utilities`, `batch-ppa`, `admin-service`, `tms-service`, `event-adjudicator`, `data-enrichment-service`, `event-monitoring-service`, `tazama-demo` | Docker image | Publish to Docker Hub; receive full workflow set including Docker build workflows |
-| **Dual-container service repos** | `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; use `dockerhub-image-build-dual*.yml` committed directly instead |
+| **Dual-container service repos** | `connection-studio`, `rule-studio` | Docker images (backend + frontend) | Each repo produces two Docker images from `backend/` and `frontend/` subdirectories, versioned from the ROOT `package.json`; in `SPECIFIC_REPOS` so do not receive the single-image `dockerhub-image-build*.yml`; in `DUAL_REPOS` so receive sync-stamped caller stubs for the `dockerhub-image-build-dual*.yml` reusable workflows |
 | **Other service repos** | `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` | - | In `SPECIFIC_REPOS`; do not receive `dockerhub-image-build*.yml` |
 | **Library repos** | `frms-coe-lib`, `frms-coe-startup-lib`, `auth-lib`, `auth-lib-provider-keycloak`, `tcs-lib`, `audit-lib`, `relay-service-integration-nats`, `relay-service-integration-rest`, `relay-service-integration-kafka`, `relay-service-integration-rabbitmq` | npm package | Publish to GitHub Packages under `@tazama-lf` scope |
 | **Rule repos - tazama-lf** | `rule-901`, `rule-902` | Docker image + npm package | Also in `PUBLISH_REPOS`; use `package-rule*.yml` caller stubs for Docker builds |
@@ -142,14 +142,16 @@ Service repos produce versioned Docker images. They do not publish npm packages.
 
 ### 3. Dual-container service repos (connection-studio, rule-studio)
 
-These repos follow the same PR check and release flow as standard Docker-building service repos, but each repo produces **two** Docker images - one from `backend/` and one from `frontend/` - independently versioned via their respective `package.json` files.
+These repos follow the same PR check and release flow as standard Docker-building service repos, but each repo produces **two** Docker images - one from `backend/` and one from `frontend/` - both versioned from the ROOT `package.json` (the single platform version stamped by the release train).
 
 > `case-management-system` was previously in this class. It produces four images (backend, migrate, frontend, voila) and is now classified as a [custom Docker build repo](#7-custom-docker-build-repos-biar-case-management-system).
 
-They are listed in both `REPOS` (to receive all common workflows) and `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`). The dual-image Docker workflows are **not distributed via sync** and must be committed directly to each repo:
+They are listed in `REPOS` (to receive all common workflows), `SPECIFIC_REPOS` (to suppress the single-image `dockerhub-image-build*.yml`), and `DUAL_REPOS`. The dual-image Docker workflows are **reusable workflows** that stay in this repo; sync stamps caller stubs of the same filenames into each dual repo (mirroring the `RULE_REPOS` / `package-rule*.yml` pattern):
 
-- `dockerhub-image-build-dual-rc.yml` - fires on `push: dev`; builds and pushes `tazamaorg/<repo>-backend:rc` and `tazamaorg/<repo>-frontend:rc`
-- `dockerhub-image-build-dual.yml` - fires on `push: main`; builds and pushes `tazamaorg/<repo>-backend:<version>` and `tazamaorg/<repo>-frontend:<version>`
+- `dockerhub-image-build-dual-rc.yml` stub - fires on `push: dev`; calls the reusable workflow `@dev`; builds and pushes `tazamaorg/<repo>-backend:rc` and `tazamaorg/<repo>-frontend:rc`
+- `dockerhub-image-build-dual.yml` stub - fires on `push: main` and `release: published`; calls the reusable workflow `@v1`; builds and pushes `tazamaorg/<repo>-backend:<version>` + `:latest` and `tazamaorg/<repo>-frontend:<version>` + `:latest`
+
+The stubs carry an explicit `permissions` block (`packages`, `contents`, `attestations`, `id-token`) because the reusable workflows generate provenance attestations.
 
 All other steps (PR checks, `sbom.yml`, `scorecard.yml`, `release.yml`, etc.) are identical to [Section 2](#2-service-repos-docker-building).
 
@@ -253,8 +255,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `dependency-review-ci.yml` | Reusable: scan new dependencies for CVEs and licence restrictions; called by `dependency-review.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
 | `dockerfile-linter.yml` | Caller stub: delegates Hadolint linting to `dockerfile-linter-ci.yml` | `push: [dev,main]`, `pull_request: [dev]`, schedule | All repos (no-op where no `Dockerfile` exists) |
 | `dockerfile-linter-ci.yml` | Reusable: Hadolint Dockerfile lint with SARIF upload; called by `dockerfile-linter.yml` | `workflow_call` | **Not synced** - stays in this repo; called at runtime via `@dev` ref |
-| `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `push: [dev]`, `workflow_dispatch` | **Not synced** - committed directly to dual-container repos only |
-| `dockerhub-image-build-dual.yml` | Build and push versioned Docker images for backend and frontend | `push: [main]`, `release: [published]` | **Not synced** - committed directly to dual-container repos only |
+| `dockerhub-image-build-dual-rc.yml` | Build and push `:rc` Docker images for backend and frontend | `workflow_call` (stub: `push: [dev]`, `workflow_dispatch`) | Reusable workflow; dual-container repos receive a sync-stamped caller stub (`@dev`) |
+| `dockerhub-image-build-dual.yml` | Build and push versioned + `latest` Docker images for backend and frontend | `workflow_call` (stub: `push: [main]`, `release: [published]`, `workflow_dispatch`) | Reusable workflow; dual-container repos receive a sync-stamped caller stub (`@v1`) |
 | `dockerhub-image-build-rc.yml` | Build and push `:rc` Docker image | `push: [dev]` | Service repos only (not SPECIFIC_REPOS) |
 | `dockerhub-image-build.yml` | Build and push versioned Docker image | `push: [main]` | Service repos only (not SPECIFIC_REPOS) |
 | `gpg-verify.yml` | Caller stub: delegates commit signature verification to `gpg-verify-ci.yml` | `pull_request` | All repos |
@@ -280,14 +282,15 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 
 ## Sync Distribution
 
-`sync-workflows.yml` uses four groups to control which workflows each target repo receives.
+`sync-workflows.yml` uses five groups to control which workflows each target repo receives.
 
 | Group | Members | Behaviour |
 |-------|---------|-----------|
 | `REPOS` | All 32 tazama-lf target repos | Receive all workflows except those explicitly excluded |
-| `SPECIFIC_REPOS` | All library repos + `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`connection-studio`, `rule-studio`) + custom Docker build repos (`biar`, `case-management-system`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml`, `dockerhub-image-build-dual.yml`, `dockerhub-image-build-dual-rc.yml` |
+| `SPECIFIC_REPOS` | All library repos + `relay-service`, `rule-executer`, `Full-Stack-Docker-Tazama` + dual-container repos (`connection-studio`, `rule-studio`) + custom Docker build repos (`biar`, `case-management-system`) | Skip `dockerhub-image-build.yml`, `dockerhub-image-build-rc.yml` |
 | `PUBLISH_REPOS` | All library repos + `rule-901`, `rule-902` | Additionally receive `publish.yml`, `version-check.yml`, `release-train.yml`, `library-dependency-rollout.yml`; skip `scorecard.yml` |
 | `RULE_REPOS` | `rule-901`, `rule-902` | Receive caller stubs for `package-rule*.yml` instead of the full reusable workflow definition |
+| `DUAL_REPOS` | `connection-studio`, `rule-studio` | Receive caller stubs for `dockerhub-image-build-dual*.yml` instead of the full reusable workflow definition |
 
 **Always excluded from the sync bundle:**
 
@@ -306,6 +309,8 @@ Triggers shown are in the context of the **target repo** where each workflow is 
 | `njsscan-ci.yml` | Reusable workflow; stays in this repo and is called by the `njsscan.yml` stub at runtime via `@dev` ref |
 | `node-ci.yml` | Reusable workflow; stays in this repo and is called by the `node.js.yml` stub at runtime via `@dev` ref |
 | `sbom-ci.yml` | Reusable workflow; stays in this repo and is called by the `sbom.yml` stub at runtime via `@dev` ref |
+| `dockerhub-image-build-dual-rc.yml` | Reusable workflow; stays in this repo and is called by the sync-stamped stub in `DUAL_REPOS` at runtime via `@dev` ref |
+| `dockerhub-image-build-dual.yml` | Reusable workflow; stays in this repo and is called by the sync-stamped stub in `DUAL_REPOS` at runtime via `@v1` ref |
 
 **Additionally distributed (not in `.github/workflows/`):**
 
@@ -348,7 +353,7 @@ When a new repository is created in the Tazama ecosystem, it needs to be enrolle
 | Class | Receives Docker build workflows? | Receives `publish.yml` / `version-check.yml` / `release-train.yml` / `library-dependency-rollout.yml`? |
 |-------|----------------------------------|----------------------------------------------------------------------------------------------------------|
 | Service repo (Docker-building) | ✅ Yes | ❌ No |
-| Dual-container service repo | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
+| Dual-container service repo | ✅ Caller stubs (add to `SPECIFIC_REPOS` + `DUAL_REPOS`) | ❌ No |
 | Custom Docker build repo (biar, case-management-system) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Other service repo (no Docker build) | ❌ No (add to `SPECIFIC_REPOS`) | ❌ No |
 | Library repo | ❌ No (add to `SPECIFIC_REPOS`) | ✅ Yes (add to `PUBLISH_REPOS`); also add entry to `library-consumers.json` if it will be consumed by other repos |
@@ -363,6 +368,7 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 - **Other service, dual-container, custom Docker build, library, or tazama-lf rule repo**: also add to `SPECIFIC_REPOS`
 - **Library or tazama-lf rule repo**: also add to `PUBLISH_REPOS`
 - **tazama-lf rule repo**: also add to `RULE_REPOS`
+- **Dual-container repo**: also add to `DUAL_REPOS`
 
 > Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) - full org migration pending).
 
@@ -374,7 +380,7 @@ A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.y
 - Stamps the `package-rule-rc.yml` / `package-rule.yml` caller stubs for `RULE_REPOS`.
 - Copies `config-templates/.codacy.yml` to the repo root.
 
-The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are the only workflow files never distributed by sync; they apply solely to dual-container repos and are committed directly there (see [Section 3](#3-dual-container-service-repos-connection-studio-rule-studio)).
+The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are reusable workflows that stay in this repo; sync stamps caller stubs into `DUAL_REPOS` members (see [Section 3](#3-dual-container-service-repos-connection-studio-rule-studio)).
 
 ### Step 4 - Open a PR to `dev` in this repo
 

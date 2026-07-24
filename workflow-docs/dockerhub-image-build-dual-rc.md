@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Builds two Docker images - one for the `backend` subdirectory and one for the `frontend` subdirectory - and pushes each to Docker Hub with a floating `:rc` tag whenever code is merged to `dev`. Provides testable release-candidate images for both components without overwriting the stable production tags. For repositories whose source tree contains separate `backend/` and `frontend/` applications that are independently versioned and published as separate Docker images.
+Builds two Docker images - one for the `backend` subdirectory and one for the `frontend` subdirectory - and pushes each to Docker Hub with a floating `:rc` tag whenever code is merged to `dev`. Provides testable release-candidate images for both components without overwriting the stable production tags. A **reusable workflow** (`workflow_call`): dual-container repos receive a sync-stamped caller stub of the same filename that fires on `push: dev` and `workflow_dispatch`, calling this definition `@dev`.
 
 ---
 
@@ -10,8 +10,9 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 | Event | Conditions |
 |-------|-----------|
-| `push` | branches: `[dev]` |
-| `workflow_dispatch` | manual |
+| `workflow_call` | Called by the stamped stub in each dual-container repo |
+
+Stub triggers: `push` branches `[dev]`, `workflow_dispatch`.
 
 ---
 
@@ -36,9 +37,10 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-backend`
-5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./backend` context and `./backend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
+5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./backend` context and `./backend/Dockerfile`; pushes image; passes `GH_TOKEN_LIB` as `GH_TOKEN` build secret
 6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` - generates local build attestation (`push-to-registry: false` - RC builds are not published to the Sigstore transparency log)
-7. `Send Slack Notification` - posts to `SLACK_WEBHOOK_URL`
+7. `Resolve source PR` - best-effort lookup of the PR behind the pushed commit for the notification
+8. `Send Slack Notification` (`if: always()`) - posts to `SLACK_WEBHOOK_URL`
 
 ### `push_frontend_rc` - Push frontend RC Docker image to Docker Hub
 
@@ -48,9 +50,10 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`; image name: `tazamaorg/<REPO_NAME>-frontend`
-5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./frontend` context and `./frontend/Dockerfile`; pushes image; passes `GH_TOKEN` as build secret
+5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds from `./frontend` context and `./frontend/Dockerfile`; pushes image; passes `GH_TOKEN_LIB` as `GH_TOKEN` build secret
 6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` - generates local build attestation (`push-to-registry: false` - RC builds are not published to the Sigstore transparency log)
-7. `Send Slack Notification` - posts to `SLACK_WEBHOOK_URL`
+7. `Resolve source PR` - best-effort lookup of the PR behind the pushed commit for the notification
+8. `Send Slack Notification` (`if: always()`) - posts to `SLACK_WEBHOOK_URL`
 
 ---
 
@@ -60,8 +63,10 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 |--------|-------|---------|
 | `DOCKER_USERNAME` | org | Docker Hub login |
 | `DOCKER_PASSWORD` | org | Docker Hub password |
-| `GH_TOKEN` | org | `npm ci` build secret for private package access |
+| `GH_TOKEN_LIB` | org | `npm ci` build secret (passed to the Docker build as `GH_TOKEN`) for private package access |
 | `SLACK_WEBHOOK_URL` | org | Slack notification |
+
+Secrets reach the reusable workflow via `secrets: inherit` in the caller stub.
 
 ---
 
@@ -69,10 +74,8 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 | Group | Behaviour |
 |-------|-----------|
-| `REPOS` (service repos) | Listed in `REPOS` but also in `SPECIFIC_REPOS` - **dual-container repos are in both lists** |
-| `SPECIFIC_REPOS` | **Excluded via `SPECIFIC_FILES`** - `dockerhub-image-build-dual-rc.yml` is listed in `SPECIFIC_FILES` and therefore not copied to repos in `SPECIFIC_REPOS` |
-
-> This workflow is **not distributed via sync**. It must be committed directly to each dual-container repo. See [Repository Overrides](#repository-overrides) below.
+| `DUAL_REPOS` (`connection-studio`, `rule-studio`) | Receive a **caller stub** of the same filename stamped by sync; the stub calls this reusable workflow `@dev` with `secrets: inherit` and an explicit `permissions` block |
+| All other repos | Excluded - the reusable definition is removed from the sync bundle (`rm -f`), like the `*-ci.yml` reusables |
 
 ---
 
@@ -99,9 +102,9 @@ Builds two Docker images - one for the `backend` subdirectory and one for the `f
 
 ## Repository Overrides
 
-This workflow is **not distributed by sync**. The dual-container repos listed below maintain their own copy committed directly to the repo.
+None - both dual-container repos run the identical stamped stub calling this canonical definition.
 
-| Repository | Reason |
+| Repository | Distribution |
 |-----------|--------|
-| `connection-studio` | Dual-container repo (backend + frontend); canonical single-image workflow cannot represent this |
-| `rule-studio` | Dual-container repo (backend + frontend); canonical single-image workflow cannot represent this |
+| `connection-studio` | Sync-stamped caller stub (`@dev`) |
+| `rule-studio` | Sync-stamped caller stub (`@dev`) |
