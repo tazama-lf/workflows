@@ -277,7 +277,7 @@ jobs:
                 '  workflow_dispatch:' \
                 'jobs:' \
                 '  build:' \
-                "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@main" \
+                "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@v1" \
                 '    with:' \
                 "      rule_number: \"${RULE_NUM}\"" \
                 '      rule_org: "tazama-lf"' \
@@ -373,7 +373,7 @@ jobs:
                   '  workflow_dispatch:' \
                   'jobs:' \
                   '  build:' \
-                  "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@main" \
+                  "    uses: tazama-lf/workflows/.github/workflows/package-rule.yml@v1" \
                   '    with:' \
                   "      rule_number: \"${RULE_NUM}\"" \
                   '      rule_org: "tazama-lf"' \
