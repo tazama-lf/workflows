@@ -110,8 +110,8 @@ jobs:
             rule-studio
             biar
             tazama-demo
-          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Docker workflows: only for repos that build Docker images (i.e. not in SPECIFIC_REPOS)
-          SPECIFIC_REPOS: |  # Repos that do NOT build Docker images - receive all workflows except SPECIFIC_FILES
+          SPECIFIC_FILES: dockerhub-image-build.yml dockerhub-image-build-rc.yml  # Canonical single-image Docker workflows: only for repos that build a single Docker image (i.e. not in SPECIFIC_REPOS)
+          SPECIFIC_REPOS: |  # Repos excluded from the canonical single-image Docker workflows (SPECIFIC_FILES): either build no Docker image, build via stamped dual caller stubs (connection-studio, rule-studio - see DUAL_REPOS), or own bespoke multi workflows committed directly (biar, case-management-system)
             relay-service
             Full-Stack-Docker-Tazama
             rule-executer
@@ -147,6 +147,9 @@ jobs:
           RULE_REPOS: |  # Rule repos that receive caller stubs instead of full package-rule*.yml copies
             rule-901
             rule-902
+          DUAL_REPOS: |  # Dual-container repos that receive caller stubs for the dockerhub-image-build-dual*.yml reusable workflows
+            connection-studio
+            rule-studio
           PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
@@ -178,8 +181,8 @@ jobs:
           rm -f temp-workflows/njsscan-ci.yml                 # Reusable workflow: called by reference from njsscan.yml stub; consumer repos don't need a local copy
           rm -f temp-workflows/dockerfile-linter-ci.yml       # Reusable workflow: called by reference from dockerfile-linter.yml stub; consumer repos don't need a local copy
           rm -f temp-workflows/sbom-ci.yml                    # Reusable workflow: called by reference from sbom.yml stub; consumer repos don't need a local copy
-          rm -f temp-workflows/dockerhub-image-build-dual.yml     # Dual-container Docker workflows: never synced; committed directly to target repos
-          rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Dual-container Docker workflows: never synced; committed directly to target repos
+          rm -f temp-workflows/dockerhub-image-build-dual.yml     # Reusable workflow: called by reference from stamped caller stubs in DUAL_REPOS; consumer repos don't need a local copy
+          rm -f temp-workflows/dockerhub-image-build-dual-rc.yml  # Reusable workflow: called by reference from stamped caller stubs in DUAL_REPOS; consumer repos don't need a local copy
           # Release/library workflows and reusable package-rule definitions live only in tazama-lf/workflows.
           # Product repos receive thin callers (bootstrap) or package-rule stubs stamped below — not full copies.
           rm -f temp-workflows/dev-to-main-pr.yml
@@ -285,6 +288,50 @@ jobs:
                 > "$repo/.github/workflows/package-rule.yml"
               echo "Stamped caller stubs for rule-${RULE_NUM} (tazama-lf)"
             fi
+            # Stamp caller stubs for dual-container repos (replaces the hand-committed full copies)
+            if in_list "$repo" "$DUAL_REPOS"; then
+              # RC caller stub
+              printf '%s\n' \
+                '# SPDX-License-Identifier: Apache-2.0' \
+                '# This file is managed centrally - do not edit manually.' \
+                '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                'on:' \
+                '  push:' \
+                '    branches: [dev]' \
+                '  workflow_dispatch:' \
+                'jobs:' \
+                '  build:' \
+                '    permissions:' \
+                '      packages: write' \
+                '      contents: read' \
+                '      attestations: write' \
+                '      id-token: write' \
+                "    uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual-rc.yml@dev" \
+                '    secrets: inherit' \
+                > "$repo/.github/workflows/dockerhub-image-build-dual-rc.yml"
+              # Stable caller stub
+              printf '%s\n' \
+                '# SPDX-License-Identifier: Apache-2.0' \
+                '# This file is managed centrally - do not edit manually.' \
+                '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                'on:' \
+                '  push:' \
+                '    branches: [main]' \
+                '  release:' \
+                '    types: [published]' \
+                '  workflow_dispatch:' \
+                'jobs:' \
+                '  build:' \
+                '    permissions:' \
+                '      packages: write' \
+                '      contents: read' \
+                '      attestations: write' \
+                '      id-token: write' \
+                "    uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual.yml@v1" \
+                '    secrets: inherit' \
+                > "$repo/.github/workflows/dockerhub-image-build-dual.yml"
+              echo "Stamped dual caller stubs for ${repo}"
+            fi
             cd "$repo"
             # Copy .codacy.yml to repo root - standard engine allowlist for TS/Node repos
             cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
@@ -379,6 +426,46 @@ jobs:
                   '      rule_org: "tazama-lf"' \
                   '    secrets: inherit' \
                   > ".github/workflows/package-rule.yml"
+              fi
+              if in_list "$repo" "$DUAL_REPOS"; then
+                printf '%s\n' \
+                  '# SPDX-License-Identifier: Apache-2.0' \
+                  '# This file is managed centrally - do not edit manually.' \
+                  '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                  'on:' \
+                  '  push:' \
+                  '    branches: [dev]' \
+                  '  workflow_dispatch:' \
+                  'jobs:' \
+                  '  build:' \
+                  '    permissions:' \
+                  '      packages: write' \
+                  '      contents: read' \
+                  '      attestations: write' \
+                  '      id-token: write' \
+                  "    uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual-rc.yml@dev" \
+                  '    secrets: inherit' \
+                  > ".github/workflows/dockerhub-image-build-dual-rc.yml"
+                printf '%s\n' \
+                  '# SPDX-License-Identifier: Apache-2.0' \
+                  '# This file is managed centrally - do not edit manually.' \
+                  '# To change build behaviour, update the reusable workflow in tazama-lf/workflows.' \
+                  'on:' \
+                  '  push:' \
+                  '    branches: [main]' \
+                  '  release:' \
+                  '    types: [published]' \
+                  '  workflow_dispatch:' \
+                  'jobs:' \
+                  '  build:' \
+                  '    permissions:' \
+                  '      packages: write' \
+                  '      contents: read' \
+                  '      attestations: write' \
+                  '      id-token: write' \
+                  "    uses: tazama-lf/workflows/.github/workflows/dockerhub-image-build-dual.yml@v1" \
+                  '    secrets: inherit' \
+                  > ".github/workflows/dockerhub-image-build-dual.yml"
               fi
               cp "${WORKFLOWS_ROOT}/config-templates/.codacy.yml" ".codacy.yml"
               rm -f .github/workflows/dco-check.yaml
