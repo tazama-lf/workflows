@@ -22,7 +22,7 @@ Builds a Docker image and pushes it to Docker Hub with a floating `:rc` tag when
 | Runner | `ubuntu-latest` |
 | Typical duration | ~5–8 min |
 | Concurrency | none |
-| Permissions | `packages: write`, `contents: read`, `attestations: write`, `id-token: write` |
+| Permissions | `packages: read`, `contents: read`, `attestations: write`, `id-token: write` |
 
 ---
 
@@ -36,7 +36,7 @@ Builds a Docker image and pushes it to Docker Hub with a floating `:rc` tag when
 2. `docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121` - authenticates to Docker Hub
 3. `Set ENV variables` - derives `REPO_NAME` from `GITHUB_REPOSITORY`
 4. `docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf` - generates tag: `type=raw,value=rc`
-5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds and pushes image; passes `GH_TOKEN` as build arg for private package access
+5. `docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294` - builds and pushes image; passes the job's `GITHUB_TOKEN` as the `GH_TOKEN` build secret (BuildKit secret mount, not a build arg)
 6. `actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32` - generates local build attestation (`push-to-registry: false` - RC builds are not published to the Sigstore transparency log)
 7. `Send Slack Notification` - posts to `SLACK_WEBHOOK_URL`
 
@@ -48,7 +48,7 @@ Builds a Docker image and pushes it to Docker Hub with a floating `:rc` tag when
 |--------|-------|---------|
 | `DOCKER_USERNAME` | org | Docker Hub login |
 | `DOCKER_PASSWORD` | org | Docker Hub password |
-| `GH_TOKEN` | org | `npm ci` build arg for private package access |
+| `GITHUB_TOKEN` | auto | `npm ci` build secret (mounted in the Docker build as `GH_TOKEN`) for GitHub Packages; requires `packages: read` |
 | `SLACK_WEBHOOK_URL` | org | Slack notification |
 
 ---
