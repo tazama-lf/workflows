@@ -25,27 +25,33 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Git  # Step to configure Git with necessary details
+      - name: Set up Git  # Configure Git to commit as the tazama-bot account and sign with its SSH key
+        env:
+          BOT_GIT_NAME: ${{ vars.BOT_GIT_NAME }}
+          BOT_GIT_EMAIL: ${{ vars.BOT_GIT_EMAIL }}
+          BOT_SSH_SIGNING_KEY: ${{ secrets.BOT_SSH_SIGNING_KEY }}
         run: |
-          git config --global user.name 'Justus-at-Tazama'
-          git config --global user.email '123470803+Justus-at-Tazama@users.noreply.github.com'
+          # BOT_GIT_NAME and BOT_GIT_EMAIL are org variables; BOT_SSH_SIGNING_KEY is an org secret.
+          for name in BOT_GIT_NAME BOT_GIT_EMAIL BOT_SSH_SIGNING_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::${name} is not set or not visible to this repo. Add it at org level before running the sync." >&2
+              exit 1
+            fi
+          done
+          git config --global user.name "$BOT_GIT_NAME"
+          git config --global user.email "$BOT_GIT_EMAIL"
           git config --global credential.helper store
           # Configure SSH commit signing so sync commits show as Verified on GitHub.
-          # SSH_SIGNING_KEY must be stored base64-encoded (single line, no wrapping) to avoid
-          # line-ending corruption. Set with: base64 -w 0 signing_key | gh secret set SSH_SIGNING_KEY
-          # The corresponding public key must be registered as a Signing Key on the GitHub account
-          # that GH_TOKEN belongs to: Settings -> SSH and GPG keys -> New signing key.
-          if [ -z "${{ secrets.SSH_SIGNING_KEY }}" ]; then
-            echo "::error::SSH_SIGNING_KEY secret is not set. Commits cannot be signed. Add the secret before running the sync." >&2
-            exit 1
-          fi
+          # BOT_SSH_SIGNING_KEY holds the plain OpenSSH private key file (not base64-encoded).
+          # The corresponding public key must be registered as a Signing Key on the tazama-bot account
+          # (the account that owns BOT_TOKEN_TAZAMA_LF): Settings -> SSH and GPG keys -> New signing key.
           mkdir -p ~/.ssh
-          # Decode the base64 secret directly to the key file - no line-ending issues possible.
-          echo "${{ secrets.SSH_SIGNING_KEY }}" | base64 -d > ~/.ssh/signing_key
+          # Strip carriage returns and blank lines in case the secret was saved with Windows line endings.
+          printf '%s\n' "$BOT_SSH_SIGNING_KEY" | tr -d '\r' | sed '/^$/d' > ~/.ssh/signing_key
           chmod 600 ~/.ssh/signing_key
           # Validate the key is a usable Ed25519/RSA private key before enabling signing.
           ssh-keygen -y -f ~/.ssh/signing_key > /dev/null || {
-            echo "::error::SSH_SIGNING_KEY is not a valid SSH private key or is passphrase-protected. Fix the secret before running the sync." >&2
+            echo "::error::BOT_SSH_SIGNING_KEY is not a valid SSH private key or is passphrase-protected. Fix the secret before running the sync." >&2
             exit 1
           }
           git config --global gpg.format ssh
@@ -150,9 +156,13 @@ jobs:
           DUAL_REPOS: |  # Dual-container repos that receive caller stubs for the dockerhub-image-build-dual*.yml reusable workflows
             connection-studio
             rule-studio
-          PR_REVIEWERS: ${{ secrets.GH_USERNAME }}  # List of reviewers
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN_TAZAMA_LF }}  # tazama-bot fine-grained PAT, used by git push and the gh CLI
         run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "::error::BOT_TOKEN_TAZAMA_LF is not set or not visible to this repo. Add it at org level before running the sync." >&2
+            exit 1
+          fi
+
           SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
 
           # Capture the workspace root so we can reference config-templates/ after cd-ing into each repo
@@ -203,7 +213,7 @@ jobs:
 
             git clone https://github.com/$ORG/$repo.git
             cd $repo
-            git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/$ORG/$repo.git
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/$ORG/$repo.git"
 
             # Ensure dev branch exists in target repo - create from default branch if absent.
             if ! git ls-remote --heads origin dev | grep -q dev; then
@@ -338,17 +348,11 @@ jobs:
             # Remove legacy dco-check.yaml (wrong extension - canonical is dco-check.yml)
             rm -f .github/workflows/dco-check.yaml
             git add -A .github/workflows/ .codacy.yml
-            # Create the PR with reviewers
-            IFS=',' read -ra REVIEWERS <<< "${PR_REVIEWERS}"
-            REVIEWERS_ARGS=""
-            for reviewer in "${REVIEWERS[@]}"; do
-              REVIEWERS_ARGS+="--reviewer $reviewer "
-            done
-
+            # Reviews are requested by each target repo's CODEOWNERS file.
             PR_BODY="This PR syncs workflows from the central-workflows repository."$'\n\n'"${SIGNED_OFF_BY}"
             if git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}"; then
               git push origin sync-workflows-update || git push origin sync-workflows-update --force
-              if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update $REVIEWERS_ARGS 2>/dev/null; then
+              if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base dev --head sync-workflows-update 2>/dev/null; then
                 PR_URL=$(gh pr view sync-workflows-update --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
                 [ -n "$PR_URL" ] && CREATED_PRS+=("$ORG/$repo $PR_URL") || true
               else
@@ -472,7 +476,7 @@ jobs:
               git add -A .github/workflows/ .codacy.yml
               if git commit -m "ci: sync workflows from central-workflows [skip ci]" -m "${SIGNED_OFF_BY}"; then
                 git push origin sync-workflows-update-main || git push origin sync-workflows-update-main --force
-                if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main $REVIEWERS_ARGS 2>/dev/null; then
+                if gh pr create --title "ci: sync workflows from central-workflows [skip ci]" --body "$PR_BODY" --base main --head sync-workflows-update-main 2>/dev/null; then
                   MAIN_PR_URL=$(gh pr view sync-workflows-update-main --repo "$ORG/$repo" --json url --jq '.url' 2>/dev/null || echo "")
                   [ -n "$MAIN_PR_URL" ] && CREATED_MAIN_PRS+=("$ORG/$repo $MAIN_PR_URL") || true
                 else

@@ -22,7 +22,7 @@ Propagates canonical workflow files and the standard `.codacy.yml` engine allowl
 | Runner | `ubuntu-latest` |
 | Typical duration | ~10–30 min (scales with number of target repos) |
 | Concurrency | `group: sync-workflows-${{ github.ref }}`, cancel-in-progress |
-| Permissions | default (plus `GH_TOKEN` for cross-repo operations) |
+| Permissions | default (plus `BOT_TOKEN_TAZAMA_LF` for cross-repo operations) |
 
 ---
 
@@ -47,18 +47,20 @@ Propagates canonical workflow files and the standard `.codacy.yml` engine allowl
 **Steps:**
 
 1. `actions/checkout@v4` - checks out this workflows repo
-2. `Set up Git` - configures git identity for commits
+2. `Set up Git` - configures the `tazama-bot` git identity from `BOT_GIT_NAME` and `BOT_GIT_EMAIL`, and SSH commit signing with `BOT_SSH_SIGNING_KEY`; fails early if any of them is missing
 3. `Get actor details` - captures the triggering actor's name and email for commit attribution; uses the PR author for `pull_request` events and `github.actor` for `push`/`workflow_dispatch` events
-4. `Sync Workflows to Other Repos` - main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, copies `config-templates/.codacy.yml` to the repo root (`.codacy.yml`), commits all changes, pushes, opens PR. The commit message and PR title both include `[skip ci]` so that squash-merging the sync PR to `dev` in the target repo suppresses all push-triggered workflows on the resulting commit (prevents unnecessary CI and Docker publish runs for pure workflow-file changes). **`sync-workflows-update` is a reserved branch name** - do not use it for regular development contributions.
+4. `Sync Workflows to Other Repos` - main loop: clones each repo, ensures `dev` branch exists (creates from default branch if absent), deletes any existing `sync-workflows-update` branch, creates a fresh `sync-workflows-update` from `dev`, applies per-file sync rules, copies `config-templates/.codacy.yml` to the repo root (`.codacy.yml`), commits all changes, pushes, opens PR. Reviews are requested by each target repo's `CODEOWNERS` file. The commit message and PR title both include `[skip ci]` so that squash-merging the sync PR to `dev` in the target repo suppresses all push-triggered workflows on the resulting commit (prevents unnecessary CI and Docker publish runs for pure workflow-file changes). **`sync-workflows-update` is a reserved branch name** - do not use it for regular development contributions.
 
 ---
 
-## Required Secrets
+## Required Secrets and Variables
 
-| Secret | Scope | Purpose |
-|--------|-------|-------|
-| `GH_TOKEN` | org | Clone, push, and open PRs against target repos |
-| `GH_USERNAME` | org | PR reviewer assignment |
+| Name | Type | Scope | Purpose |
+|------|------|-------|---------|
+| `BOT_TOKEN_TAZAMA_LF` | secret | org (selected repos) | Fine-grained PAT owned by `tazama-bot`: push and open PRs against target repos |
+| `BOT_SSH_SIGNING_KEY` | secret | org (selected repos) | `tazama-bot` SSH signing key, stored as the plain OpenSSH private key file (not base64-encoded) |
+| `BOT_GIT_NAME` | variable | org | Commit author name |
+| `BOT_GIT_EMAIL` | variable | org | Commit author email |
 
 ---
 
