@@ -163,7 +163,8 @@ jobs:
             exit 1
           fi
 
-          SIGNED_OFF_BY="Signed-off-by: ${{ env.PR_AUTHOR_NAME_FULL }} <${{ env.PR_AUTHOR_EMAIL }}>"
+          # Sign-off chain: the person who triggered the run, then the bot, so the last sign-off matches the commit author.
+          SIGNED_OFF_BY="Signed-off-by: ${PR_AUTHOR_NAME_FULL} <${PR_AUTHOR_EMAIL}>"$'\n'"Signed-off-by: $(git config --global user.name) <$(git config --global user.email)>"
 
           # Capture the workspace root so we can reference config-templates/ after cd-ing into each repo
           WORKFLOWS_ROOT="${GITHUB_WORKSPACE}"
