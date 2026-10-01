@@ -43,14 +43,14 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 
 **Steps:**
 
-1. `actions/checkout@v4` (`ref: dev`) - checks out the rule repo `dev` (rc) line
+1. `actions/checkout` - checks out the rule repo at the triggering ref (`dev` for a push to `dev` or a `workflow_dispatch` on `dev`)
 2. `actions/setup-node@v4` - Node 22
 3. `Read rule version from package.json` - reads `version`; fails if version is NOT a prerelease (`-` suffix required - guards against RC build running on a stable version)
 4. `Clone Rule Executer repository (dev branch)` - clones `tazama-lf/rule-executer@dev`
 5. `Prepare rule-executer-<N>` - copies cloned directory
 6. `Modify package.json and Dockerfile for rule <N>` - uses a `case` statement on `rule_org` (`frmscoe` → `@frmscoe` scope + `npm:@frmscoe/rule-*`; `tazama-lf` → `@tazama-lf` scope + `npm:@tazama-lf/rule-*`; any other value → `exit 1`) to patch the rule dependency, `ENV RULE_NAME`, `ENV APM_SERVICE_NAME`; validates each substitution succeeded with `grep` + `exit 1`
 7. `Regenerate package-lock.json for rule <N>` - deletes the stale lock file, runs `npm install --package-lock-only --ignore-scripts` to regenerate it from the modified `package.json`, then validates the lock file references the correct rule module (see [Lock file design note](#lock-file-design-note) below)
-8. `Build and push RC Docker image` - builds once; tags with `VERSION` and `:rc`; pushes both
+8. `Build and push RC Docker image` - refuses to push unless `GITHUB_REF` is `refs/heads/${SOURCE_BRANCH}` (default `dev`) for every event; builds once; tags with `VERSION` and `:rc`; pushes both
 9. `Send Slack notification` - posts to `SLACK_WEBHOOK_URL`
 
 ---
@@ -87,9 +87,11 @@ Called from a caller stub `package-rule-rc.yml` in each rule repo rather than be
 ## Known Limitations / Notes
 
 - `dependabot[bot]` actors are excluded.
-- Rule repo caller stubs also trigger on `repository_dispatch: types: [rule-executer-update]`, enabling rule images to be rebuilt when `rule-executer` itself changes without needing a new commit in the rule repo.
-- The checkout step is pinned to `ref: dev`. RC builds must always read the rc line, but `actions/checkout` defaults to the ref that triggered the run - and under `repository_dispatch` (and `workflow_dispatch` once the default branch is `main`) that fallback is the repository default branch, not `dev`. Consumer rule repos pivoted their default branch from `dev` to `main`, so without the explicit `ref: dev` a dispatch-triggered run checked out `main` (a stable version) and failed the prerelease guard. Do not remove the `ref: dev` pin.
-- The "Build and push RC Docker image" step's source-branch guard only applies to `push` events. Because the checkout is pinned to `ref: dev`, `repository_dispatch` and `workflow_dispatch` runs always build the dev line even though their `GITHUB_REF` resolves to the default branch (`main`); guarding those events on `GITHUB_REF` would incorrectly refuse the dispatch-triggered rebuilds.
+- The checkout is not pinned to a branch, and the source branch guard applies to every event. A run must therefore be triggered on `dev`: a push to `dev`, or a `workflow_dispatch` on `dev`. A run on `main` reads `main`'s stable version and fails "Read rule version from package.json".
+- Rule images are rebuilt after a `rule-executer` change by `rule-executer` itself: on push to its `dev` branch, `trigger-rules-901-and-902.yml` (tazama-lf rules) and `trigger-rules-frmscoe.yml` (frmscoe rules, from the tazama-lf organization variable `FRMSCOE_RULES`) run each rule's `package-rule-rc.yml` with `workflow_dispatch` on `ref: dev`.
+- Do not use `repository_dispatch` for rc rebuilds. It always runs on the rule repo's default branch (`main`), so the build reads a stable version and fails ([#147](https://github.com/tazama-lf/workflows/issues/147), [#184](https://github.com/tazama-lf/workflows/issues/184)).
+- GitHub accepts a `workflow_dispatch` only if the rule repo's default branch (`main`) has a `package-rule-rc.yml` with a `workflow_dispatch` trigger, so the `main` caller stub must keep that trigger.
+- To rebuild by hand, open Actions in the rule repo, choose the rc workflow, click "Run workflow" and select `dev`.
 
 ---
 
