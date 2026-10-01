@@ -269,8 +269,6 @@ jobs:
                 'on:' \
                 '  push:' \
                 '    branches: [dev]' \
-                '  repository_dispatch:' \
-                '    types: [rule-executer-update]' \
                 '  workflow_dispatch:' \
                 'jobs:' \
                 '  build:' \
@@ -404,8 +402,6 @@ jobs:
                   'on:' \
                   '  push:' \
                   '    branches: [dev]' \
-                  '  repository_dispatch:' \
-                  '    types: [rule-executer-update]' \
                   '  workflow_dispatch:' \
                   'jobs:' \
                   '  build:' \
