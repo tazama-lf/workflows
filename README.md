@@ -28,9 +28,10 @@ For detailed documentation on any individual workflow, see the [`workflow-docs/`
 - [Adding Automation to a New Repository](#adding-automation-to-a-new-repository)
   - [Step 1 - Determine the repository class](#step-1---determine-the-repository-class)
   - [Step 2 - Add the repo to sync-workflows.yml](#step-2---add-the-repo-to-sync-workflowsyml-in-this-repo)
-  - [Step 3 - No manual bootstrap required](#step-3---no-manual-bootstrap-required)
-  - [Step 4 - Open a PR to dev in this repo](#step-4---open-a-pr-to-dev-in-this-repo)
-  - [Step 5 - Update workflow-docs/](#step-5---update-workflow-docs)
+  - [Step 3 - Grant tazama-bot write access to the repo](#step-3---grant-tazama-bot-write-access-to-the-repo)
+  - [Step 4 - No manual bootstrap required](#step-4---no-manual-bootstrap-required)
+  - [Step 5 - Open a PR to dev in this repo](#step-5---open-a-pr-to-dev-in-this-repo)
+  - [Step 6 - Update workflow-docs/](#step-6---update-workflow-docs)
 - [Routine Maintenance](#routine-maintenance)
   - [Updating the library consumer catalog](#updating-the-library-consumer-catalog-library-consumersjson)
   - [Pinned action SHA updates](#pinned-action-sha-updates)
@@ -372,7 +373,27 @@ Open `.github/workflows/sync-workflows.yml` and add the repo name to the appropr
 
 > Library repos (`PUBLISH_REPOS`) are cloned from `tazama-lf`; service repos are cloned from `frmscoe` (see [known issue #28](https://github.com/tazama-lf/workflows/issues/28) - full org migration pending).
 
-### Step 3 - (No manual bootstrap required)
+### Step 3 - Grant `tazama-bot` write access to the repo
+
+The sync pushes the `sync-workflows-update` branch and opens PRs as `tazama-bot`, using the `BOT_TOKEN_TAZAMA_LF` fine-grained PAT. A fine-grained PAT can never do more than its owner can, so **both** of the following must cover the new repo before the Step 5 PR merges:
+
+1. **Token scope.** The `tazama-bot` account must include the repo in the PAT's *Repository access*: go to Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens -> the token stored as `BOT_TOKEN_TAZAMA_LF`.
+   - If the token is set to **All repositories**, new repos are covered automatically.
+   - If it is set to **Only select repositories**, add the repo.
+   - Required repository permissions: Metadata (read); Actions, Contents, Pull requests and Workflows (read and write).
+2. **Repo access for the bot.** In the new repo, go to Settings -> Collaborators and teams -> Add teams and add the **`bots`** team with **Write**. `tazama-bot` gets its write access through this team. New repos inherit only the org base permission (read), so the team has to be added for every new repo.
+
+The org secret's own *Repository access* list (Organization settings -> Secrets and variables -> Actions -> `BOT_TOKEN_TAZAMA_LF`) only controls which repos can **read** the secret, and the sync reads it from this repo only. Adding the new repo to that list does not grant the bot any access.
+
+Verify before merging (expected: `write`, `maintain` or `admin`):
+
+```bash
+gh api repos/tazama-lf/<repo>/collaborators/tazama-bot/permission --jq .role_name
+```
+
+If this step is missed, the sync job fails for that repo with `remote: Permission to tazama-lf/<repo>.git denied to tazama-bot.` and `The requested URL returned error: 403`. Fix the access and re-run the failed job.
+
+### Step 4 - (No manual bootstrap required)
 
 A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.yml` creates the `.github/workflows/` directory itself (`mkdir -p`) before copying, so it runs against repos that have no workflow directory yet. On the first sync it automatically:
 
@@ -382,11 +403,11 @@ A brand-new repo does **not** need to be bootstrapped by hand. `sync-workflows.y
 
 The dual-image Docker workflows (`dockerhub-image-build-dual*.yml`) are reusable workflows that stay in this repo; sync stamps caller stubs into `DUAL_REPOS` members (see [Section 3](#3-dual-container-service-repos-connection-studio-rule-studio)).
 
-### Step 4 - Open a PR to `dev` in this repo
+### Step 5 - Open a PR to `dev` in this repo
 
-Raise a PR with the `sync-workflows.yml` changes from Step 2 and merge it after review. When the PR **merges** to `dev`, `sync-workflows.yml` runs (on the `push: dev` trigger) and opens `sync-workflows-update` PRs in all target repos - the new entry is included. The sync does **not** run when the PR is merely opened (this was [#36](https://github.com/tazama-lf/workflows/issues/36), now fixed).
+Raise a PR with the `sync-workflows.yml` changes from Step 2 and merge it after review, once the access from Step 3 is in place. When the PR **merges** to `dev`, `sync-workflows.yml` runs (on the `push: dev` trigger) and opens `sync-workflows-update` PRs in all target repos - the new entry is included. The sync does **not** run when the PR is merely opened (this was [#36](https://github.com/tazama-lf/workflows/issues/36), now fixed).
 
-### Step 5 - Update `workflow-docs/`
+### Step 6 - Update `workflow-docs/`
 
 Add a documentation file for any new canonical workflow using [`workflow-docs/docs-template.md`](workflow-docs/docs-template.md) as a starting point, and update the [Canonical Workflow Reference](#canonical-workflow-reference) table and [Sync Distribution](#sync-distribution) section if the new repo changes group membership.
 
